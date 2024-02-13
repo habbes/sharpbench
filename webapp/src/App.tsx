@@ -18,12 +18,23 @@ function App() {
         language: initial.language,
         text: initial.code,
         serverOptions: (initial.mode !== 'regular' ? { 'x-mode': initial.mode } : {})
-      })
+      });
+    
   },);
+
+  function handleRun() {
+    if (!ms.current) return;
+
+    const text = ms.current.getText();
+    console.log('text', text);
+  }
 
   return (
     <>
-      <div ref={containerRef}></div>
+      <div>
+        <button onClick={handleRun}>Run</button>
+        <div ref={containerRef}></div>
+      </div>
     </>
   )
 }
