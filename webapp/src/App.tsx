@@ -3,8 +3,9 @@ import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
 
-// TODO this should inferred from the current host
-const SERVICE_URL = "ws://localhost:5176/mirrorsharp";
+// TODO this should be configure using env vars
+const EDITOR_SERVICE_URL = "ws://localhost:5176/mirrorsharp";
+const API_URL = "http://localhost:5176";
 
 const INITIAL_CODE = `
 public class Benchmark
@@ -30,7 +31,7 @@ export function App() {
 
   function handleRun() {
     if (!code) return;
-    console.log('text', code);
+    submitCodeRun(code);
   }
 
   return (
@@ -43,12 +44,30 @@ export function App() {
       </div>
       <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
         <CodeEditor
-          serverUrl={SERVICE_URL}
+          serverUrl={EDITOR_SERVICE_URL}
           initialCode={INITIAL_CODE}
           onTextChange={setCode}
         />
       </div>
     </main>
   )
+}
+
+async function submitCodeRun(code: string) {
+  console.log('submitting code run', code);
+  const resp = await fetch(`${API_URL}/run`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      code: code
+    }),
+    mode: 'cors'
+  });
+
+  const data = await resp.json();
+  console.log('code run result', data);
+  return data;
 }
 
