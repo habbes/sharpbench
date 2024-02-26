@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import './App.css'
 import "mirrorsharp-codemirror-6-preview/mirrorsharp.css";
 import mirrorsharp, { MirrorSharpInstance } from 'mirrorsharp-codemirror-6-preview';
+import { Button } from "@/components/ui/button";
 
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,7 +18,7 @@ function App() {
         serviceUrl: 'ws://localhost:5176/mirrorsharp',
         language: initial.language,
         text: initial.code,
-        serverOptions: (initial.mode !== 'regular' ? { 'x-mode': initial.mode } : {})
+        serverOptions: (initial.mode !== 'regular' ? { 'x-mode': initial.mode } : {}),
       });
     
   },);
@@ -30,12 +31,17 @@ function App() {
   }
 
   return (
-    <>
-      <div>
-        <button onClick={handleRun}>Run</button>
-        <div ref={containerRef}></div>
+    <main className="h-screen bg-red flex flex-col">
+      <div className="h-[50px] px-2 flex items-center border-b border-b-gray-200 shadow-sm">
+        <div className="mr-5">
+          <span className="font-semibold">sharpbench</span>
+        </div>
+        <Button onClick={handleRun}>Run</Button>
       </div>
-    </>
+      <div className="flex flex-1">
+        <div className="flex-1 overflow-y-auto" style={{height:"calc(100dvh - 50px)"}} ref={containerRef}></div>
+      </div>
+    </main>
   )
 }
 
