@@ -49,6 +49,14 @@ class JobRunner
     private async Task RunJob(Job job)
     {
         this.tracker.ReportJobStarted(job.Id);
+        var cwd = new DirectoryInfo(Directory.GetCurrentDirectory());
+        Console.WriteLine($"cwd: {cwd}");
+        var projectTemplateDir = Path.Combine(Directory.GetCurrentDirectory(), "project-template");
+        foreach (var file in Directory.GetFiles(projectTemplateDir))
+        {
+            Console.WriteLine($"file {file}");
+        }
+
         Console.WriteLine($"Running job {job.Id}");
     }
 }
