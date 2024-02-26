@@ -8,7 +8,7 @@ const EDITOR_SERVICE_URL = "ws://localhost:5176/mirrorsharp";
 const API_URL = "http://localhost:5176";
 
 const INITIAL_CODE = `
-public class Benchmark
+public class MyBenchmark
 {
     private int[] array = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
