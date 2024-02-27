@@ -28,6 +28,26 @@ app.MapPost("/run", (RunArgs args) =>
     return result;
 });
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/jobs-ws")
+    {
+        if (context.WebSockets.IsWebSocketRequest)
+        {
+            using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            await runner.RealTimeSyncWithClient(webSocket);
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        }
+    }
+    else
+    {
+        await next(context);
+    }
+});
+
 app.Run();
 
 

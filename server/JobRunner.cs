@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net.WebSockets;
+using System.Text.Json;
 
 namespace Sharpbench;
 
@@ -7,6 +9,7 @@ class JobRunner
 {
     ConcurrentBag<Job> queue = new();
     JobsTracker tracker;
+    ConcurrentDictionary<WebSocket, WebSocket> realTimeClients = new();
     public JobRunner(JobsTracker tracker)
     {
         tracker.OnNewJob(this.HandleOnNewJob);
@@ -23,6 +26,38 @@ class JobRunner
     {
         Console.WriteLine("Running jobs...");
         Task.Run(() => RunBackgroundJobs()); // TODO: proper background job handling
+    }
+
+    public Task RealTimeSyncWithClient(WebSocket client)
+    {
+        realTimeClients.TryAdd(client, client);
+        while (client.State == WebSocketState.Open)
+        {
+            Thread.Sleep(1000);
+        }
+
+        realTimeClients.Remove(client, out _);
+        return Task.CompletedTask;
+    }
+
+    private async Task BroadcastLogMessage(LogMessage message)
+    {
+        var stream = new MemoryStream();
+        JsonSerializer.Serialize(stream, message);
+        stream.Position = 0;
+        byte[] bytes = stream.ToArray();
+        var data = new ArraySegment<byte>(bytes, 0, bytes.Length);
+        // TODO: broadcast for simplicity, but should send messages to the right clients
+        await BroadCastMessage(data);
+    }
+
+    private async Task BroadCastMessage(ArraySegment<byte> message)
+    {
+        foreach (var kvp in realTimeClients)
+        {
+            var client = kvp.Value;
+            await client.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
     }
 
     private async Task RunBackgroundJobs()
@@ -76,7 +111,7 @@ class JobRunner
         Console.WriteLine($"Running job {job.Id}");
 
         
-        int exitCode = await ExecuteBenchmarkProject(tempProjectDir);
+        int exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
         Console.WriteLine("Execution complete");
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
@@ -90,11 +125,11 @@ class JobRunner
         Console.WriteLine($"Exit code {exitCode}");
     }
 
-    private async Task<int> ExecuteBenchmarkProject(string projectDir)
+    private async Task<int> ExecuteBenchmarkProject(int jobId, string projectDir)
     {
         Console.WriteLine("Starting benchmark run");
         Console.WriteLine("Restoring project...");
-        int restoreExitCode = await RunRestore(projectDir);
+        int restoreExitCode = await RunRestore(jobId, projectDir);
         if (restoreExitCode != 0)
         {
             Console.WriteLine("Restore failed");
@@ -102,7 +137,7 @@ class JobRunner
         }
 
         Console.WriteLine("Running project...");
-        int runExitCode = await RunBuildAndRun(projectDir);
+        int runExitCode = await RunBuildAndRun(jobId, projectDir);
         if (runExitCode != 0)
         {
             Console.WriteLine("Run failed");
@@ -111,23 +146,23 @@ class JobRunner
         return runExitCode;
     }
 
-    private Task<int> RunRestore(string projectDir)
+    private Task<int> RunRestore(int jobId, string projectDir)
     {
         // TODO instead of ignoring failed sources, we could specify a Nuget config
         // file that specifies the sources to target
-        return RunDotnetStep(projectDir, "restore -s https://api.nuget.org/v3/index.json --ignore-failed-sources");
+        return RunDotnetStep(jobId, projectDir, "restore -s https://api.nuget.org/v3/index.json --ignore-failed-sources");
     }
 
-    private Task<int> RunBuildAndRun(string projectDir)
+    private Task<int> RunBuildAndRun(int jobId, string projectDir)
     {
         // We should run this after restore has completed;
         // TODO: I set inProcess option as hack to avoid building the benchmarked code separately
         // cause that leads to Nuget restore issues on my machine because of the credentials issue
         // I should disable this once I containerize these background jobs
-        return RunDotnetStep(projectDir, "run -c Release --no-restore -- --filter=* --inProcess");
+        return RunDotnetStep(jobId, projectDir, "run -c Release --no-restore -- --filter=* --inProcess");
     }
 
-    private async Task<int> RunDotnetStep(string projectDir, string args)
+    private async Task<int> RunDotnetStep(int jobId, string projectDir, string args)
     {
         try 
         {
@@ -146,16 +181,28 @@ class JobRunner
             // Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
             // Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
 
-            process.OutputDataReceived += (sender, args) => 
+            process.OutputDataReceived += async void (sender, args) => 
             {
                 Console.ResetColor();
                 Console.WriteLine(args.Data);
+                if (args.Data == null)
+                {
+                    return;
+                }
+
+                await BroadcastLogMessage(new LogMessage(jobId, "stdout", args.Data));
             };
 
-            process.ErrorDataReceived += (sender, args) =>
+            process.ErrorDataReceived += async void (sender, args) =>
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(args.Data);
+                if (args.Data == null)
+                {
+                    return;
+                }
+
+                await BroadcastLogMessage(new LogMessage(jobId, "stderr", args.Data));
             };
 
             bool started = process.Start();
@@ -178,3 +225,4 @@ class JobRunner
     }
 }
 
+record LogMessage(int JobId, string LogSource, string Message);
