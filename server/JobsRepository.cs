@@ -19,16 +19,29 @@ class JobsTracker
         return this.UpdateStatus(jobId, JobStatus.Progress);
     }
 
+    public Job ReportJobSuccess(int jobId, string markdownResult)
+    {
+        return this.UpdateStatus(jobId, JobStatus.Complete, markdownResult, exitCode: 0);
+    }
+
+    public Job ReportJobError(int jobId, int exitCode)
+    {
+        return this.UpdateStatus(jobId, JobStatus.Error, exitCode: exitCode);
+    }
+
     public void OnNewJob(Action<Job> handler)
     {
         this.newJobHandler = handler;
+        
     }
 
-    private Job UpdateStatus(int jobId, JobStatus status)
+    private Job UpdateStatus(int jobId, JobStatus status, string? markdownResult = null, int? exitCode = null)
     {
         var oldJob = this.jobs[jobId];
         var updatedJob = oldJob with {
-            Status = status
+            Status = status,
+            MarkdownResult = markdownResult,
+            ExitCode = exitCode
         };
 
         this.jobs[jobId] = updatedJob;
@@ -46,4 +59,4 @@ enum JobStatus
     Error
 }
 
-record Job(int Id, string Code, JobStatus Status);
+record Job(int Id, string Code, JobStatus Status, string? MarkdownResult = null, int? ExitCode = null);

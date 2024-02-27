@@ -40,26 +40,7 @@ class JobRunner
         return Task.CompletedTask;
     }
 
-    private async Task BroadcastLogMessage(LogMessage message)
-    {
-        var stream = new MemoryStream();
-        JsonSerializer.Serialize(stream, message);
-        stream.Position = 0;
-        byte[] bytes = stream.ToArray();
-        var data = new ArraySegment<byte>(bytes, 0, bytes.Length);
-        // TODO: broadcast for simplicity, but should send messages to the right clients
-        await BroadCastMessage(data);
-    }
-
-    private async Task BroadCastMessage(ArraySegment<byte> message)
-    {
-        foreach (var kvp in realTimeClients)
-        {
-            var client = kvp.Value;
-            await client.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
-        }
-    }
-
+    
     private async Task RunBackgroundJobs()
     {
         while (true)
@@ -113,16 +94,41 @@ class JobRunner
         
         int exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
         Console.WriteLine("Execution complete");
+        if (exitCode != 0)
+        {
+            // report error
+            Console.WriteLine($"Execution failed with exit code {exitCode}");
+            Directory.Delete(tempProjectDir, recursive: true);
+            var failedJob = this.tracker.ReportJobError(job.Id, exitCode);
+            await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
+            
+            Console.WriteLine($"Deleting folder '{ tempProjectDir }'");
+            Directory.Delete(tempProjectDir, recursive: true);
+            return;
+        }
+
+        // success
+        
+        var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
+        var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
+        if (ghMdPath == null)
+        {
+            throw new Exception("Could not find markdown report");
+        }
+
+        var mdReport = File.ReadAllText(ghMdPath);
+        var successJob = this.tracker.ReportJobSuccess(job.Id, mdReport);
+        await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+        
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
         {
             Console.WriteLine($"user project file: { entry }");
         }
 
+        // TODO: clean up should be in a finally block
         Console.WriteLine($"Deleting folder '{ tempProjectDir }'");
         Directory.Delete(tempProjectDir, recursive: true);
-        Console.WriteLine($"Directory deleted? {!Directory.Exists(tempProjectDir)}");
-        Console.WriteLine($"Exit code {exitCode}");
     }
 
     private async Task<int> ExecuteBenchmarkProject(int jobId, string projectDir)
@@ -190,7 +196,7 @@ class JobRunner
                     return;
                 }
 
-                await BroadcastLogMessage(new LogMessage(jobId, "stdout", args.Data));
+                await BroadcastMessage(new LogMessage("log", jobId, "stdout", args.Data));
             };
 
             process.ErrorDataReceived += async void (sender, args) =>
@@ -202,7 +208,7 @@ class JobRunner
                     return;
                 }
 
-                await BroadcastLogMessage(new LogMessage(jobId, "stderr", args.Data));
+                await BroadcastMessage(new LogMessage("log", jobId, "stderr", args.Data));
             };
 
             bool started = process.Start();
@@ -223,6 +229,28 @@ class JobRunner
             Console.ResetColor();
         }
     }
+
+    private async Task BroadcastMessage<T>(T message)
+    {
+        var stream = new MemoryStream();
+        JsonSerializer.Serialize(stream, message);
+        stream.Position = 0;
+        byte[] bytes = stream.ToArray();
+        var data = new ArraySegment<byte>(bytes, 0, bytes.Length);
+        // TODO: broadcast for simplicity, but should send messages to the right clients
+        await BroadcastRawMessage(data);
+    }
+
+    private async Task BroadcastRawMessage(ArraySegment<byte> message)
+    {
+        foreach (var kvp in realTimeClients)
+        {
+            var client = kvp.Value;
+            await client.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+    }
+
 }
 
-record LogMessage(int JobId, string LogSource, string Message);
+record LogMessage(string Type, int JobId, string LogSource, string Message);
+record JobCompleteMessage(string Type, int JobId, Job Job);
