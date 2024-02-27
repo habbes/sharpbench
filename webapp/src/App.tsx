@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
+import { ResultsContainer } from "@/components/results-container";
 
 // TODO this should be configure using env vars
 const EDITOR_SERVICE_URL = "ws://localhost:5176/mirrorsharp";
@@ -61,11 +62,16 @@ export function App() {
         <Button onClick={handleRun}>Run</Button>
       </div>
       <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
-        <CodeEditor
-          serverUrl={EDITOR_SERVICE_URL}
-          initialCode={INITIAL_CODE}
-          onTextChange={setCode}
-        />
+        <div className="flex-1 h-full">
+          <CodeEditor
+            serverUrl={EDITOR_SERVICE_URL}
+            initialCode={INITIAL_CODE}
+            onTextChange={setCode}
+          />
+        </div>
+        <div className="flex-1 h-full border-l border-l-gray-200">
+          <ResultsContainer />
+        </div>
       </div>
     </main>
   )
