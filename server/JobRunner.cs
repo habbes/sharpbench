@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Sharpbench;
 
@@ -67,21 +68,83 @@ class JobRunner
             File.Copy(file, destFile, overwrite: true);
         }
 
-        var userBenchmarkClass = Path.Combine(tempProjectDir, "Benhmark.cs");
+        var userBenchmarkClass = Path.Combine(tempProjectDir, "Benhmarks.cs");
         Console.WriteLine($"Writing user code in {userBenchmarkClass}");
         File.WriteAllText(userBenchmarkClass, job.Code);
 
 
         Console.WriteLine($"Running job {job.Id}");
 
-        // ensure project files were generated correctly
-        foreach (var file in Directory.GetFiles(tempProjectDir))
+        
+        int exitCode = await ExecuteBenchmarkProject(tempProjectDir);
+        Console.WriteLine("Execution complete");
+        // ensure project and result files were generated correctly
+        foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
         {
-            Console.WriteLine($"user project file: { file }");
+            Console.WriteLine($"user project file: { entry }");
         }
 
         Console.WriteLine($"Deleting folder '{ tempProjectDir }'");
         Directory.Delete(tempProjectDir, recursive: true);
         Console.WriteLine($"Directory deleted? {!Directory.Exists(tempProjectDir)}");
+        Console.WriteLine($"Exit code {exitCode}");
+    }
+
+    private async Task<int> ExecuteBenchmarkProject(string projectDir)
+    {
+        Console.WriteLine("Starting benchmark run");
+        Console.WriteLine("Restoring project...");
+        int restoreExitCode = await RunRestore(projectDir);
+        if (restoreExitCode != 0)
+        {
+            Console.WriteLine("Restore failed");
+            return restoreExitCode;
+        }
+
+        Console.WriteLine("Running project...");
+        int runExitCode = await RunBuildAndRun(projectDir);
+        if (runExitCode != 0)
+        {
+            Console.WriteLine("Run failed");
+        }
+
+        return runExitCode;
+    }
+
+    private Task<int> RunRestore(string projectDir)
+    {
+        // TODO instead of ignoring failed sources, we could specify a Nuget config
+        // file that specifies the sources to target
+        return RunDotnetStep(projectDir, "restore -s https://api.nuget.org/v3/index.json --ignore-failed-sources");
+    }
+
+    private Task<int> RunBuildAndRun(string projectDir)
+    {
+        // We should run this after restore has completed;
+        // TODO: I set inProcess option as hack to avoid building the benchmarked code separately
+        // cause that leads to Nuget restore issues on my machine because of the credentials issue
+        // I should disable this once I containerize these background jobs
+        return RunDotnetStep(projectDir, "run -c Release --no-restore -- --filter=* --inProcess");
+    }
+
+    private async Task<int> RunDotnetStep(string projectDir, string args)
+    {
+        var process = Process.Start(new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = projectDir,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            Arguments = args,
+            
+        }) ?? throw new Exception("Failed to start process");
+
+         Console.WriteLine("Started process");
+        // TODO should stream the outputs instead
+        Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
+        Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
+        await process.WaitForExitAsync();
+        int exitCode = process.ExitCode;
+        return exitCode;
     }
 }
+

@@ -7,10 +7,28 @@ import { CodeEditor } from "@/components/code-editor";
 const EDITOR_SERVICE_URL = "ws://localhost:5176/mirrorsharp";
 const API_URL = "http://localhost:5176";
 
-const INITIAL_CODE = `
-public class MyBenchmark
+const INITIAL_CODE = `// visit https://benchmarkdotnet.org/ for more info on BenchmarkDotNet
+
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
+
+// Don't change this namespace.
+namespace SharpbenchBenchmark;
+
+[MemoryDiagnoser]
+public class Benchmarks
 {
-    private int[] array = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    // Write your benchmarks here
+    const int size = 1_000_000_000;
+    private int[] array = new int[size];
+
+    public Benchmarks()
+    {
+      for (int i = 0; i < size; i++)
+      {
+        array[i] = i + 1;
+      }
+    }
 
     [Benchmark]
     public int ArraySum()
