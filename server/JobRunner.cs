@@ -129,22 +129,52 @@ class JobRunner
 
     private async Task<int> RunDotnetStep(string projectDir, string args)
     {
-        var process = Process.Start(new ProcessStartInfo("dotnet")
+        try 
         {
-            WorkingDirectory = projectDir,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            Arguments = args,
+            var process = new Process();
+            process.StartInfo = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = projectDir,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                Arguments = args,
+                
+            };
             
-        }) ?? throw new Exception("Failed to start process");
+            Console.WriteLine("Started process");
+            // TODO should stream the outputs to the client instead
+            // Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
+            // Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
 
-         Console.WriteLine("Started process");
-        // TODO should stream the outputs instead
-        Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
-        Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
-        await process.WaitForExitAsync();
-        int exitCode = process.ExitCode;
-        return exitCode;
+            process.OutputDataReceived += (sender, args) => 
+            {
+                Console.ResetColor();
+                Console.WriteLine(args.Data);
+            };
+
+            process.ErrorDataReceived += (sender, args) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(args.Data);
+            };
+
+            bool started = process.Start();
+            if (!started)
+            {
+                throw new Exception("Failed to start process");
+            }
+
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+
+            await process.WaitForExitAsync();
+            int exitCode = process.ExitCode;
+            return exitCode;
+        }
+        finally
+        {
+            Console.ResetColor();
+        }
     }
 }
 

@@ -13,8 +13,7 @@ const INITIAL_CODE = `// visit https://benchmarkdotnet.org/ for more info on Ben
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 
-// Don't change this namespace.
-namespace SharpbenchBenchmark;
+namespace MyBenchmarks;
 
 [MemoryDiagnoser]
 public class Benchmarks
