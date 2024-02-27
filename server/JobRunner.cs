@@ -49,14 +49,39 @@ class JobRunner
     private async Task RunJob(Job job)
     {
         this.tracker.ReportJobStarted(job.Id);
+        
+
+        var tempFolderName = Path.GetRandomFileName();;
+        var tempProjectDir = Path.Combine(Path.GetTempPath(), tempFolderName);
+        Directory.CreateDirectory(tempProjectDir);
+
+        // copy files from the project template to the temp project dir
         var cwd = new DirectoryInfo(Directory.GetCurrentDirectory());
         Console.WriteLine($"cwd: {cwd}");
         var projectTemplateDir = Path.Combine(Directory.GetCurrentDirectory(), "project-template");
         foreach (var file in Directory.GetFiles(projectTemplateDir))
         {
             Console.WriteLine($"file {file}");
+            var destFile = Path.Combine(tempProjectDir, Path.GetFileName(file));
+            Console.WriteLine($"Copying '{file} to '{destFile}");
+            File.Copy(file, destFile, overwrite: true);
         }
 
+        var userBenchmarkClass = Path.Combine(tempProjectDir, "Benhmark.cs");
+        Console.WriteLine($"Writing user code in {userBenchmarkClass}");
+        File.WriteAllText(userBenchmarkClass, job.Code);
+
+
         Console.WriteLine($"Running job {job.Id}");
+
+        // ensure project files were generated correctly
+        foreach (var file in Directory.GetFiles(tempProjectDir))
+        {
+            Console.WriteLine($"user project file: { file }");
+        }
+
+        Console.WriteLine($"Deleting folder '{ tempProjectDir }'");
+        Directory.Delete(tempProjectDir, recursive: true);
+        Console.WriteLine($"Directory deleted? {!Directory.Exists(tempProjectDir)}");
     }
 }
