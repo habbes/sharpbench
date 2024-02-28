@@ -1,0 +1,8 @@
+# 2024-02-28 Deployment model
+
+Now I have a working prototype running locally and using docker to run benchmarks based on custom image I pushed to dockerhub: `habbes/sharpbench-runner`.
+
+Now it's time to deploy this. To simplify deployment and to properly coordinate and schedule multiple benchmark jobs, I'm thinking of decoupling the benchmark runner from the server and moving it to a separate service.
+I plan to deploy the server on easy-to-deploy PaaS platforms like Azure Web Apps or Railway, I doubt such platforms would allow me to create arbitrary docker containers. I can deploy the benchmark runner to a barebones VM where I can choose the OS and also install docker on. The frontend can be deployed on static-hosting platforms like Azure or Vercel.
+
+To send messages between the server and runner, I would need a queue. Well I could also have the server and worker communicate directly via REST API or gRPC to keep the infrastructure simple and cheap, but that would complicate things because the server would have to know where the runner is deployed, it would have to frequently check whether it's still up, etc. Let's go with the queue, it's more future-proof anyway. I'm thinking of using Redis cause it's easy to deploy on various platforms and I can also use it as an DB to keep track of submitted jobs. At this point of the project I'm not concerned about long term persistence. I don't mind data getting wiped each time the service is deployed. At the moment, I'm not providing any "save" or "sharing" feature. But jobs that are in process migh fail when when I redeploy or restart the backend components and the user would have to start a fresh.
