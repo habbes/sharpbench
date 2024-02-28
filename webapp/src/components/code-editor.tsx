@@ -22,6 +22,8 @@ export function CodeEditor({
     if (!containerRef.current) return;
     if (ms.current) return;
     console.log('rendering ms');
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     ms.current = mirrorsharp(
       containerRef.current, {
         serviceUrl: serverUrl,
