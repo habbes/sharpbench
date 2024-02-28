@@ -24,6 +24,11 @@ The previous issue is good demonstration that running the benchmarks on the host
 
 ## Docker strategies
 
+**Resources:**
+
+- [Tutorial: Containerize a .NET app](https://learn.microsoft.com/en-us/dotnet/core/docker/build-container)
+- [How to run BenchmarkDotNet in a Docker container](https://wojciechnagorski.com/2019/12/how-to-run-benchmarkdotnet-in-a-docker-container/)
+
 I have a few strategies in mind with regards to which docker images to create and a few trade-offs to consider. One important thing to keep in mind is that the program to run is not known in advance since it depends on the user's code that's submitted dynamically. So we can't just package everything in a docker image ahead of time and run container from that. We need something that can allow us to build the code each time we want to run a benchmark.
 
 ### Single docker image to build and run benchmarks
@@ -43,3 +48,14 @@ Maybe it's possible to create a custom image that contains the dotnet sdk that's
 This approach consists of install the dotnet SDK directly on the host system and using docker to run the benchmarks. So the restore and publish steps would be performed on the host system directly and then this would be mounted to a docker container that's based on a dotnet runtime image. This is based on the assumption that install dotnet sdk on host takes up fewer resources compared to installing a dotnet sdk docker image. However since BenchmarkDotNet requires some dotnet sdk tools to build the benchmark process, this approach is only vialble if we restrict to the benchmarks to run in in-process mode. Another downside of this approach is that it makes the build process less portable because it relies on things being already installed and properly configured on the host machine. We also have to ensure that the sdk version on the machine is compatible with the dotnet runtime version in the container.
 
 Actually now that I think of it, many of the approaches I had in mind are not viable if we want to support the default out-of-process of execution of BenchmarkDotNet. I think I'll just stick to the first approach for now (single docker image based on dotnet sdk and mounting the project at runtime) and consider optimizations in future.
+
+### Concerns
+
+When running BenchmarkDotNet in docker I see the following warning
+
+```sh
+Failed to set up high priority (Permission denied). In order to run benchmarks with high priority, make sure you have the right permissions
+```
+
+So I'll probably have to worry about security and permission configurations for the container.
+
