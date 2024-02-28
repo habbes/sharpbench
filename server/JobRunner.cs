@@ -40,7 +40,7 @@ class JobRunner
         return Task.CompletedTask;
     }
 
-    
+
     private async Task RunBackgroundJobs()
     {
         while (true)
@@ -66,7 +66,7 @@ class JobRunner
     private async Task RunJob(Job job)
     {
         this.tracker.ReportJobStarted(job.Id);
-        
+
 
         var tempFolderName = Path.GetRandomFileName();;
         var tempProjectDir = Path.Combine(Path.GetTempPath(), tempFolderName);
@@ -91,7 +91,7 @@ class JobRunner
 
         Console.WriteLine($"Running job {job.Id}");
 
-        
+
         int exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
         Console.WriteLine("Execution complete");
         if (exitCode != 0)
@@ -101,14 +101,14 @@ class JobRunner
             Directory.Delete(tempProjectDir, recursive: true);
             var failedJob = this.tracker.ReportJobError(job.Id, exitCode);
             await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
-            
+
             Console.WriteLine($"Deleting folder '{ tempProjectDir }'");
             Directory.Delete(tempProjectDir, recursive: true);
             return;
         }
 
         // success
-        
+
         var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
         var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
         if (ghMdPath == null)
@@ -119,7 +119,7 @@ class JobRunner
         var mdReport = File.ReadAllText(ghMdPath);
         var successJob = this.tracker.ReportJobSuccess(job.Id, mdReport);
         await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
-        
+
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
         {
@@ -135,21 +135,50 @@ class JobRunner
     {
         Console.WriteLine("Starting benchmark run");
         Console.WriteLine("Restoring project...");
-        int restoreExitCode = await RunRestore(jobId, projectDir);
-        if (restoreExitCode != 0)
+        (int exitCode, string container) = await CreateContainer(jobId, projectDir);
+        if (exitCode != 0)
         {
-            Console.WriteLine("Restore failed");
-            return restoreExitCode;
+            Console.WriteLine("Create container failed");
+            return exitCode;
         }
 
-        Console.WriteLine("Running project...");
-        int runExitCode = await RunBuildAndRun(jobId, projectDir);
-        if (runExitCode != 0)
+        exitCode = await StartContainer(jobId, projectDir, container);
+        if (exitCode != 0)
         {
-            Console.WriteLine("Run failed");
+            Console.WriteLine("Failed to start container");
+            return exitCode;
         }
 
-        return runExitCode;
+        exitCode = await StreamContainerLogs(jobId, projectDir, container);
+        if (exitCode != 0)
+        {
+            Console.WriteLine("Failed to stream container logs");
+            return exitCode;
+        }
+
+        exitCode = await RemoveContainer(jobId, projectDir, container);
+        if (exitCode != 0)
+        {
+            Console.WriteLine("Failed to remove container");
+            return exitCode;
+        }
+
+        return exitCode;
+        // int restoreExitCode = await RunRestore(jobId, projectDir);
+        // if (restoreExitCode != 0)
+        // {
+        //     Console.WriteLine("Restore failed");
+        //     return restoreExitCode;
+        // }
+
+        // Console.WriteLine("Running project...");
+        // int runExitCode = await RunBuildAndRun(jobId, projectDir);
+        // if (runExitCode != 0)
+        // {
+        //     Console.WriteLine("Run failed");
+        // }
+
+        // return runExitCode;
     }
 
     private Task<int> RunRestore(int jobId, string projectDir)
@@ -168,9 +197,109 @@ class JobRunner
         return RunDotnetStep(jobId, projectDir, "run -c Release --no-restore -- --filter=* --inProcess");
     }
 
+    private async Task<(int exitCode, string container)> CreateContainer(int jobId, string projectDir)
+    {
+        var image = "habbes/sharpbench-runner";
+        string container = Path.GetRandomFileName().Split('.')[0];
+        int exitCode = await RunDockerStep(
+            jobId,
+            projectDir,
+            $"create -v {projectDir}:/src --name {container} {image}"
+        );
+
+        return (exitCode, container);
+    }
+
+    private Task<int> StartContainer(int jobId, string projectDir, string containerName)
+    {
+        return RunDockerStep(
+            jobId,
+            projectDir,
+            $"start {containerName}"
+        );
+    }
+
+    private Task<int> StreamContainerLogs(int jobId, string projectDir, string containerName)
+    {
+        return RunDockerStep(
+            jobId,
+            projectDir,
+            $"logs --follow --details {containerName}"
+        );
+    }
+
+    private Task<int> RemoveContainer(int jobId, string projectDir, string containerName)
+    {
+        return RunDockerStep(
+            jobId,
+            projectDir,
+            $"rm {containerName}"
+        );
+    }
+
+    private async Task<int> RunDockerStep(int jobId, string projectDir, string args)
+    {
+        try
+        {
+            var process = new Process();
+            process.StartInfo = new ProcessStartInfo("docker")
+            {
+                WorkingDirectory = projectDir,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                Arguments = args
+            };
+            Console.WriteLine("Started process");
+            // TODO should stream the outputs to the client instead
+            // Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
+            // Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
+
+            process.OutputDataReceived += async void (sender, args) =>
+            {
+                Console.ResetColor();
+                Console.WriteLine(args.Data);
+                if (args.Data == null)
+                {
+                    return;
+                }
+
+                await BroadcastMessage(new LogMessage("log", jobId, "stdout", args.Data));
+            };
+
+            process.ErrorDataReceived += async void (sender, args) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(args.Data);
+                if (args.Data == null)
+                {
+                    return;
+                }
+
+                await BroadcastMessage(new LogMessage("log", jobId, "stderr", args.Data));
+            };
+
+            bool started = process.Start();
+            if (!started)
+            {
+                throw new Exception("Failed to start process");
+            }
+
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+
+            await process.WaitForExitAsync();
+            int exitCode = process.ExitCode;
+            return exitCode;
+        }
+        finally
+        {
+            Console.ResetColor();
+        }
+    }
+
     private async Task<int> RunDotnetStep(int jobId, string projectDir, string args)
     {
-        try 
+        try
         {
             var process = new Process();
             process.StartInfo = new ProcessStartInfo("dotnet")
@@ -179,15 +308,15 @@ class JobRunner
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 Arguments = args,
-                
+
             };
-            
+
             Console.WriteLine("Started process");
             // TODO should stream the outputs to the client instead
             // Console.WriteLine("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
             // Console.WriteLine("stderr: {0}", await process.StandardError.ReadToEndAsync());
 
-            process.OutputDataReceived += async void (sender, args) => 
+            process.OutputDataReceived += async void (sender, args) =>
             {
                 Console.ResetColor();
                 Console.WriteLine(args.Data);
