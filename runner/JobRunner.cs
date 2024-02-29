@@ -90,7 +90,13 @@ internal class JobRunner
 
         // TODO: clean up should be in a finally block
         this.logger.LogInformation($"Deleting folder '{tempProjectDir}'");
-        Directory.Delete(tempProjectDir, recursive: true);
+        try
+        {
+            Directory.Delete(tempProjectDir, recursive: true);
+        }
+        catch (DirectoryNotFoundException)
+        {
+        }
     }
 
     private async Task<int> ExecuteBenchmarkProject(string jobId, string projectDir)
@@ -126,37 +132,6 @@ internal class JobRunner
         }
 
         return exitCode;
-        // int restoreExitCode = await RunRestore(jobId, projectDir);
-        // if (restoreExitCode != 0)
-        // {
-        //     this.logger.LogInformation("Restore failed");
-        //     return restoreExitCode;
-        // }
-
-        // this.logger.LogInformation("Running project...");
-        // int runExitCode = await RunBuildAndRun(jobId, projectDir);
-        // if (runExitCode != 0)
-        // {
-        //     this.logger.LogInformation("Run failed");
-        // }
-
-        // return runExitCode;
-    }
-
-    private Task<int> RunRestore(string jobId, string projectDir)
-    {
-        // TODO instead of ignoring failed sources, we could specify a Nuget config
-        // file that specifies the sources to target
-        return RunDotnetStep(jobId, projectDir, "restore -s https://api.nuget.org/v3/index.json --ignore-failed-sources");
-    }
-
-    private Task<int> RunBuildAndRun(string jobId, string projectDir)
-    {
-        // We should run this after restore has completed;
-        // TODO: I set inProcess option as hack to avoid building the benchmarked code separately
-        // cause that leads to Nuget restore issues on my machine because of the credentials issue
-        // I should disable this once I containerize these background jobs
-        return RunDotnetStep(jobId, projectDir, "run -c Release --no-restore -- --filter=* --inProcess");
     }
 
     private async Task<(int exitCode, string container)> CreateContainer(string jobId, string projectDir)
@@ -211,68 +186,6 @@ internal class JobRunner
                 RedirectStandardOutput = true,
                 Arguments = args
             };
-            this.logger.LogInformation("Started process");
-            // TODO should stream the outputs to the client instead
-            // this.logger.LogInformation("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
-            // this.logger.LogInformation("stderr: {0}", await process.StandardError.ReadToEndAsync());
-
-            process.OutputDataReceived += async void (sender, args) =>
-            {
-                Console.ResetColor();
-                this.logger.LogInformation(args.Data);
-                if (args.Data == null)
-                {
-                    return;
-                }
-
-                await BroadcastLogMessage(new LogMessage("log", jobId, "stdout", args.Data));
-            };
-
-            process.ErrorDataReceived += async void (sender, args) =>
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                this.logger.LogInformation(args.Data);
-                if (args.Data == null)
-                {
-                    return;
-                }
-
-                await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", args.Data));
-            };
-
-            bool started = process.Start();
-            if (!started)
-            {
-                throw new Exception("Failed to start process");
-            }
-
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
-
-            await process.WaitForExitAsync();
-            int exitCode = process.ExitCode;
-            return exitCode;
-        }
-        finally
-        {
-            Console.ResetColor();
-        }
-    }
-
-    private async Task<int> RunDotnetStep(string jobId, string projectDir, string args)
-    {
-        try
-        {
-            var process = new Process();
-            process.StartInfo = new ProcessStartInfo("dotnet")
-            {
-                WorkingDirectory = projectDir,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                Arguments = args,
-
-            };
-
             this.logger.LogInformation("Started process");
             // TODO should stream the outputs to the client instead
             // this.logger.LogInformation("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
