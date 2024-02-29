@@ -1,13 +1,19 @@
+using Microsoft.AspNetCore.Mvc;
 using MirrorSharp.AspNetCore;
-using Sharpbench;
+using Sharpbench.Core;
+using SharpbenchApi;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors();
+builder.Services.AddSharpbench();
+builder.Services.AddSingleton<RealtimeClientsNotifier>();
+builder.Services.AddHostedService<RealtimeMessagesWorker>();
 
-// TODO: use proper dependency injection
-var jobs = new JobsTracker();
-var runner = new JobRunner(jobs);
-runner.RunJobs();
+
+//// TODO: use proper dependency injection
+//var jobs = new JobsTracker();
+//var runner = new JobRunner(jobs);
+//runner.RunJobs();
 
 var app = builder.Build();
 
@@ -21,10 +27,10 @@ app.UseCors(builder => builder
 
 app.MapMirrorSharp("/mirrorsharp");
 
-app.MapPost("/run", (RunArgs args) =>
+app.MapPost("/run", async ([FromServices] IJobRepository jobs, RunArgs args) =>
 {
     Console.WriteLine($"Received code ${args.Code}");
-    var result = jobs.SubmitJob(args.Code);
+    var result = await jobs.SubmitJob(args.Code);
     return result;
 });
 
@@ -34,8 +40,9 @@ app.Use(async (context, next) =>
     {
         if (context.WebSockets.IsWebSocketRequest)
         {
+            var clientsNotifier = context.RequestServices.GetRequiredService<RealtimeClientsNotifier>();
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await runner.RealTimeSyncWithClient(webSocket);
+            await clientsNotifier.RealTimeSyncWithClient(webSocket);
         }
         else
         {
@@ -49,7 +56,5 @@ app.Use(async (context, next) =>
 });
 
 app.Run();
-
-
 
 record RunArgs(string Code);
