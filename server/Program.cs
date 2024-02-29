@@ -23,9 +23,13 @@ app.MapMirrorSharp("/mirrorsharp");
 
 app.MapPost("/run", async ([FromServices] IJobRepository jobs, RunArgs args) =>
 {
-    Console.WriteLine($"Received code ${args.Code}");
     var result = await jobs.SubmitJob(args.Code);
     return result;
+});
+
+app.MapGet("/status", () =>
+{
+    return new { Ok = true };
 });
 
 app.Use(async (context, next) =>
