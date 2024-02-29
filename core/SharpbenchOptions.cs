@@ -2,5 +2,5 @@
 
 public class SharpbenchOptions
 {
-    public string? RedisConnectionString { get; set; }
+    public string? RedisUrl { get; set; }
 }

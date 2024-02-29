@@ -5,18 +5,20 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class SharpbenchServiceCollectionExtensions
 {
-    private const string DEFAULT_REDIS_CONNECTION_STRING = "localhost";
+    private const string DEFAULT_REDIS_URL = "localhost";
     public static void AddSharpbench(this IServiceCollection services, Action<SharpbenchOptions>? setupAction = null)
     {
-        string? redisConnString = Environment.GetEnvironmentVariable("REDIS_URL");
+        string? redisUrl = Environment.GetEnvironmentVariable("REDIS_URL");
         var options = new SharpbenchOptions()
         {
-            RedisConnectionString = string.IsNullOrEmpty(redisConnString) ? DEFAULT_REDIS_CONNECTION_STRING : redisConnString,
+            RedisUrl = string.IsNullOrEmpty(redisUrl) ? DEFAULT_REDIS_URL : redisUrl,
         };
 
         setupAction?.Invoke(options);
 
-        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(options.RedisConnectionString);
+        Console.WriteLine($"Attempting to connect to redis url {options.RedisUrl}");
+        Console.WriteLine($"Env var was {redisUrl}");
+        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(options.RedisUrl);
 
         services.AddSingleton<IConnectionMultiplexer>(redis);
         services.AddSingleton<IDatabase>(sp => sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase());
