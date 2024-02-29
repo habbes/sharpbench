@@ -2,16 +2,17 @@ import { LogsContainer } from "@/components/logs-container";
 import { ReportContainer } from "@/components/report-container";
 import { JobCompleteMessage, LogMessage, RealtimeMessage } from "@/types";
 import { useEffect, useState } from "react";
-
-const SOCKET_URL = "ws://localhost:5176/jobs-ws";
 import useWebSocket from 'react-use-websocket';
 
+interface ResultsContainerProps {
+  jobUpdatesUrl: string;
+}
 
-export function ResultsContainer() {
+export function ResultsContainer({ jobUpdatesUrl } : ResultsContainerProps) {
   const [selectedTab, setSelectedTab] = useState<'logs'|'results'>('logs');
   const [lastLogMessage, setLastLogMessage] = useState<LogMessage>();
   const [lastResultMessage, setLastResultMessage] = useState<JobCompleteMessage>();
-  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(SOCKET_URL);
+  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(jobUpdatesUrl);
 
   useEffect(() => {
     if (!lastJsonMessage) return;
