@@ -1,50 +1,101 @@
 namespace Sharpbench.Core;
+using StackExchange.Redis;
 
 public class JobRepository
 {
-    int nextId = 1;
-    Dictionary<int, Job> jobs = new();
-    private Action<Job>? newJobHandler;
-    public SubmitJsobResult SubmitJob(string code)
+    IDatabase db;
+    public JobRepository(IDatabase redisDb)
     {
-        int id = nextId++; // TODO: I know this is not thread safe
+        this.db = redisDb;
+    }
+    public async Task<SubmitJsobResult> SubmitJob(string code)
+    {
+        string id = Guid.NewGuid().ToString();
         var newJob = new Job(id, code, JobStatus.Queued);
-        this.jobs.Add(id, newJob);
-        this.newJobHandler?.Invoke(newJob);
+        var jobHash = this.JobToRedisHash(newJob);
+        await this.db.HashSetAsync(this.GetJobKey(id), jobHash);
+        // TODO: add job to queue
         return new SubmitJsobResult(newJob.Id, newJob.Status);
     }
 
-    public Job ReportJobStarted(int jobId)
+    public async Task<Job> GetJob(string id)
+    {
+        var hash = await this.db.HashGetAllAsync(this.GetJobKey(id));
+        var job = this.RedisHashToJob(id, hash);
+        return job;
+    }
+
+    public Task<Job> ReportJobStarted(string jobId)
     {
         return this.UpdateStatus(jobId, JobStatus.Progress);
     }
 
-    public Job ReportJobSuccess(int jobId, string markdownResult)
+    public Task<Job> ReportJobSuccess(string jobId, string markdownResult)
     {
         return this.UpdateStatus(jobId, JobStatus.Complete, markdownResult, exitCode: 0);
     }
 
-    public Job ReportJobError(int jobId, int exitCode)
+    public Task<Job> ReportJobError(string jobId, int exitCode)
     {
         return this.UpdateStatus(jobId, JobStatus.Error, exitCode: exitCode);
     }
 
-    public void OnNewJob(Action<Job> handler)
+    private async Task<Job> UpdateStatus(string jobId, JobStatus status, string? markdownResult = null, int? exitCode = null)
     {
-        this.newJobHandler = handler;
-        
-    }
-
-    private Job UpdateStatus(int jobId, JobStatus status, string? markdownResult = null, int? exitCode = null)
-    {
-        var oldJob = this.jobs[jobId];
-        var updatedJob = oldJob with {
-            Status = status,
-            MarkdownResult = markdownResult,
-            ExitCode = exitCode
+        HashEntry[] update =
+        {
+            new("Status", status.ToString()),
+            new("ExitCode", exitCode),
+            new("MarkdownReport", markdownResult)
         };
 
-        this.jobs[jobId] = updatedJob;
+        await this.db.HashSetAsync(this.GetJobKey(jobId), update);
+        var updatedJob = await this.GetJob(jobId);
         return updatedJob;
     }
+
+    private HashEntry[] JobToRedisHash(Job job)
+    {
+        HashEntry[] hash =
+        {
+            new HashEntry("Id", job.Id),
+            new HashEntry("Code", job.Code),
+            new HashEntry("Status", job.Status.ToString()),
+            new HashEntry("MarkdownReport", job.MarkdownReport),
+            new HashEntry("ExitCode", job.ExitCode)
+        };
+
+        return hash;
+    }
+
+    private Job RedisHashToJob(string id, HashEntry[] hash)
+    {
+        var job = new Job(id);
+        foreach (var entry in hash)
+        {
+            if (entry.Name == "Code")
+            {
+                job.Code = (string)entry.Value!;
+            }
+
+            if (entry.Name == "Status")
+            {
+                job.Status = Enum.Parse<JobStatus>(entry.Value!);
+            }
+
+            if (entry.Name == "MarkdownReport")
+            {
+                job.MarkdownReport = (string)entry.Value!;
+            }
+
+            if (entry.Name == "ExitCode")
+            {
+                job.ExitCode = (int?)entry.Value;
+            }
+        }
+
+        return job;
+    }
+
+    private string GetJobKey(string id) => $"jobs:{id}";
 }

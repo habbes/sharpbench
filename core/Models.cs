@@ -1,6 +1,6 @@
 ﻿namespace Sharpbench.Core;
 
-public record SubmitJsobResult(int Id, JobStatus Status);
+public record SubmitJsobResult(string Id, JobStatus Status);
 
 public enum JobStatus
 {
@@ -10,4 +10,24 @@ public enum JobStatus
     Error
 }
 
-public record Job(int Id, string Code, JobStatus Status, string? MarkdownResult = null, int? ExitCode = null);
+public class Job
+{
+    public Job(string id, string code): this(id, code, JobStatus.Queued)
+    {
+    }
+
+    public Job(string id, string code, JobStatus status)
+    {
+        this.Id = id;
+        this.Code = code;
+        this.Status = status;
+    }
+
+    public Job(string id) { this.Id = id; }
+
+    public string Id { get; private set; }
+    public string Code { get; set; }
+    public JobStatus Status { get; set; }
+    public string? MarkdownReport { get; set; }
+    public int? ExitCode { get; set; }
+}
