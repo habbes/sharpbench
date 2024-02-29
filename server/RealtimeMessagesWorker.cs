@@ -3,12 +3,22 @@ using Sharpbench.Core;
 
 namespace SharpbenchApi;
 
-internal class RealtimeMessagesWorker(
-    IJobMessageStream messages,
-    RealtimeClientsNotifier clientsNotifier,
-    ILogger<RealtimeMessagesWorker> logger
-    ) : BackgroundService
+internal class RealtimeMessagesWorker : BackgroundService
 {
+    IJobMessageStream messages;
+    RealtimeClientsNotifier clientsNotifier;
+    ILogger<RealtimeMessagesWorker> logger;
+
+    public RealtimeMessagesWorker(
+        IJobMessageStream messages,
+        RealtimeClientsNotifier clientsNotifier,
+        ILogger<RealtimeMessagesWorker> logger
+    )
+    {
+        this.messages = messages;
+        this.logger = logger;
+        this.clientsNotifier = clientsNotifier;
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

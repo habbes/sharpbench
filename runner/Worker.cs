@@ -23,7 +23,7 @@ public class Worker : BackgroundService
         await foreach (string jobId in queue.ListenForJobs(stoppingToken))
         {
             _logger.LogInformation($"Worker received job '{jobId}'");
-            var runner = new JobRunner(jobId, _logger, this.jobs, this.messages);
+            var runner = new JobRunner(jobId, this.jobs, this.messages, _logger);
             await runner.RunJob();
         }
     }

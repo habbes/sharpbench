@@ -1,5 +1,4 @@
-﻿using System;
-namespace Sharpbench.Core;
+﻿namespace Sharpbench.Core;
 
 internal static class RedisHelpers
 {

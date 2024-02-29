@@ -11,7 +11,7 @@ internal class JobRunner
     ILogger logger;
     string id;
 
-    public JobRunner(string jobId, ILogger logger, IJobRepository jobs, IJobMessageStream messageStream)
+    public JobRunner(string jobId, IJobRepository jobs, IJobMessageStream messageStream, ILogger logger)
     {
         this.jobs = jobs;
         this.messages = messageStream;

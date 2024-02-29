@@ -4,9 +4,15 @@ using Sharpbench.Core;
 
 namespace SharpbenchApi;
 
-public class RealtimeClientsNotifier(ILogger<RealtimeClientsNotifier> logger)
+public class RealtimeClientsNotifier
 {
     ConcurrentDictionary<WebSocket, ClientEntry> realTimeClients = new();
+    ILogger<RealtimeClientsNotifier> logger;
+
+    public RealtimeClientsNotifier(ILogger<RealtimeClientsNotifier> logger)
+    {
+        this.logger = logger;
+    }
 
     public Task RealTimeSyncWithClient(WebSocket client)
     {
