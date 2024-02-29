@@ -1,13 +1,10 @@
 ﻿using StackExchange.Redis;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
 namespace Sharpbench.Core;
 
-public class JobMessageStream : IJobMessageStream
+internal class JobMessageStream : IJobMessageStream
 {
     ISubscriber sub;
     ConcurrentQueue<JobMessage> localBuffer = new();

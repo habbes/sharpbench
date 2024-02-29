@@ -31,3 +31,17 @@ public class Job
     public string? MarkdownReport { get; set; }
     public int? ExitCode { get; set; }
 }
+
+public record JobMessage(string JobId, JobMessageType Type, byte[] Data);
+
+public enum JobMessageType
+{
+    /// <summary>
+    /// A log message from stdout or stderr
+    /// </summary>
+    Log,
+    /// <summary>
+    /// A status update
+    /// </summary>
+    Status,
+}

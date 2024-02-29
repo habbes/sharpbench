@@ -1,7 +1,7 @@
 namespace Sharpbench.Core;
 using StackExchange.Redis;
 
-public class JobRepository : IJobRepository
+internal class JobRepository : IJobRepository
 {
     IDatabase db;
     IJobQueue jobsQueue;

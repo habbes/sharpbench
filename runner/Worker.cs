@@ -5,16 +5,16 @@ namespace Sharpbench.Runner;
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
-    IJobRepository db;
+    IJobRepository jobs;
     IJobQueue queue;
-    IJobMessageStream messagStream;
+    IJobMessageStream messages;
 
     public Worker(ILogger<Worker> logger, IJobRepository jobs, IJobQueue queue, IJobMessageStream messageStream)
     {
         _logger = logger;
-        this.db = jobs;
+        this.jobs = jobs;
         this.queue = queue;
-        this.messagStream = messageStream;
+        this.messages = messageStream;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -22,7 +22,7 @@ public class Worker : BackgroundService
         await foreach (string jobId in queue.ListenForJobs(stoppingToken))
         {
             _logger.LogInformation($"Worker received job '{jobId}'");
-            var runner = new JobRunner(this._logger, this.db, jobId);
+            var runner = new JobRunner(jobId, _logger, this.jobs, this.messages);
             await runner.RunJob();
         }
     }

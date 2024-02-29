@@ -333,7 +333,7 @@ internal class JobRunner
         stream.Position = 0;
         byte[] data = stream.ToArray();
 
-        await BroadcastRawMessage(new JobMessage(jobId, type, data);
+        await BroadcastRawMessage(new JobMessage(jobId, type, data));
     }
 
     private Task BroadcastRawMessage(JobMessage message) => this.messages.PublishMessage(message);

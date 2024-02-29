@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sharpbench.Core;
 
-public class JobQueue : IJobQueue
+internal class JobQueue : IJobQueue
 {
     IDatabase db;
     ISubscriber sub;
@@ -11,12 +11,12 @@ public class JobQueue : IJobQueue
     RedisChannel jobsChannel;
     readonly AutoResetEvent jobsAvailableSignal;
 
-    public JobQueue(IDatabase db, ISubscriber sub,string queueKey)
+    public JobQueue(IDatabase db, ISubscriber sub)
     {
         this.db = db;
         this.sub = sub;
-        this.queueKey = queueKey;
-        this.jobsChannel = new RedisChannel($"signals:{queueKey}", RedisChannel.PatternMode.Literal);
+        this.queueKey = "jobs";
+        this.jobsChannel = new RedisChannel($"signals:{this.queueKey}", RedisChannel.PatternMode.Literal);
         this.jobsAvailableSignal = new AutoResetEvent(false);
     }
 
