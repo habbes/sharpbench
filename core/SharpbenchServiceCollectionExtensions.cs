@@ -5,21 +5,27 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class SharpbenchServiceCollectionExtensions
 {
-    private const string DEFAULT_REDIS_URL = "localhost";
+    private const string REDIS_CONNECTION_STRING = "localhost";
+
+    /// <summary>
+    /// Configures core Sharpbench services.
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="setupAction">Action to customize the configuration options.</param>
     public static void AddSharpbench(this IServiceCollection services, Action<SharpbenchOptions>? setupAction = null)
     {
-        string? redisUrl = Environment.GetEnvironmentVariable("REDIS_URL");
+        string? redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
         var options = new SharpbenchOptions()
         {
-            RedisUrl = string.IsNullOrEmpty(redisUrl) ? DEFAULT_REDIS_URL : redisUrl,
+            RedisConnectionString = string.IsNullOrEmpty(redisConnectionString) ? REDIS_CONNECTION_STRING : redisConnectionString,
         };
 
         setupAction?.Invoke(options);
 
-        Console.WriteLine($"Attempting to connect to redis url {options.RedisUrl}");
-        Console.WriteLine($"Env var was {redisUrl}");
-        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(options.RedisUrl);
+        // See: https://stackexchange.github.io/StackExchange.Redis/Configuration
+        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(options.RedisConnectionString);
 
+        // See: https://stackexchange.github.io/StackExchange.Redis/Basics
         services.AddSingleton<IConnectionMultiplexer>(redis);
         services.AddSingleton<IDatabase>(sp => sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase());
         services.AddSingleton<ISubscriber>(sp => sp.GetRequiredService<IConnectionMultiplexer>().GetSubscriber());
@@ -27,5 +33,4 @@ public static class SharpbenchServiceCollectionExtensions
         services.AddSingleton<IJobRepository, JobRepository>();
         services.AddSingleton<IJobMessageStream, JobMessageStream>();
     }
-    
 }
