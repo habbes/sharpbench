@@ -21,8 +21,16 @@ internal class JobRunner
 
     public async Task RunJob()
     {
-        var job = await this.jobs.GetJob(this.id);
-        await this.RunJob(job);
+        try
+        {
+            var job = await this.jobs.GetJob(this.id);
+            await this.RunJob(job);
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError($"Error occurred while running job: {this.id}: {ex.Message}");
+            this.logger.LogError(ex.StackTrace);
+        }
     }
 
     private async Task RunJob(Job job)
