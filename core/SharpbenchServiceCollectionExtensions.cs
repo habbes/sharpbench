@@ -22,6 +22,8 @@ public static class SharpbenchServiceCollectionExtensions
 
         setupAction?.Invoke(options);
 
+        Console.WriteLine($"Attempting to connect to redis with {options.RedisConnectionString}");
+
         // See: https://stackexchange.github.io/StackExchange.Redis/Configuration
         ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(options.RedisConnectionString);
 
