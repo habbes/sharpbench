@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PlayIcon } from '@radix-ui/react-icons';
 import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
@@ -55,11 +56,15 @@ export function App() {
 
   return (
     <main className="h-screen bg-red flex flex-col">
-      <div className="h-[50px] px-2 flex items-center border-b border-b-gray-200 shadow-sm">
-        <div className="mr-5">
-          <span className="font-semibold">sharpbench</span>
+      <div className="h-[50px] px-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
+        <div>
+          <Button onClick={handleRun} className="inline-flex flex gap-2 items-center"><PlayIcon /> Run</Button>
         </div>
-        <Button onClick={handleRun}>Run</Button>
+        <div>
+          <div className="mr-5">
+            <span className="font-semibold">sharpbench</span>
+          </div>
+        </div>
       </div>
       <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
         <div className="flex-1 h-full">
