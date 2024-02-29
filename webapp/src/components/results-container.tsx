@@ -16,7 +16,7 @@ export function ResultsContainer({ jobUpdatesUrl } : ResultsContainerProps) {
 
   useEffect(() => {
     if (!lastJsonMessage) return;
-
+    
     if (lastJsonMessage.Type === 'jobComplete') {
       setLastResultMessage(lastJsonMessage);
     } else {

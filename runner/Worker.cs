@@ -19,6 +19,7 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Worker listening for jobs...");
         await foreach (string jobId in queue.ListenForJobs(stoppingToken))
         {
             _logger.LogInformation($"Worker received job '{jobId}'");

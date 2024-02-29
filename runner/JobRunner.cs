@@ -8,10 +8,10 @@ internal class JobRunner
 {
     IJobRepository jobs;
     IJobMessageStream messages;
-    ILogger<Worker> logger;
+    ILogger logger;
     string id;
 
-    public JobRunner(string jobId, ILogger<Worker> logger, IJobRepository jobs, IJobMessageStream messageStream)
+    public JobRunner(string jobId, ILogger logger, IJobRepository jobs, IJobMessageStream messageStream)
     {
         this.jobs = jobs;
         this.messages = messageStream;

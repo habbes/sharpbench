@@ -46,30 +46,48 @@ internal class JobRepository : IJobRepository
 
     private async Task<Job> UpdateStatus(string jobId, JobStatus status, string? markdownResult = null, int? exitCode = null)
     {
-        HashEntry[] update =
+        List<HashEntry> hash = new(3)
         {
             new("Status", status.ToString()),
-            new("ExitCode", exitCode),
-            new("MarkdownReport", markdownResult)
         };
 
-        await this.db.HashSetAsync(RedisHelpers.GetJobKey(jobId), update);
+        if (markdownResult != null)
+        {
+            hash.Add(new HashEntry("MarkdownReport", markdownResult));
+        }
+
+        if (exitCode != null)
+        {
+            hash.Add(new HashEntry("ExitCode", exitCode));
+        }
+
+
+        await this.db.HashSetAsync(RedisHelpers.GetJobKey(jobId), hash.ToArray());
         var updatedJob = await this.GetJob(jobId);
         return updatedJob;
     }
 
     private HashEntry[] JobToRedisHash(Job job)
     {
-        HashEntry[] hash =
+        List<HashEntry> hash = new(5)
         {
             new HashEntry("Id", job.Id),
             new HashEntry("Code", job.Code),
             new HashEntry("Status", job.Status.ToString()),
-            new HashEntry("MarkdownReport", job.MarkdownReport),
-            new HashEntry("ExitCode", job.ExitCode)
         };
 
-        return hash;
+        if (job.MarkdownReport != null)
+        {
+            hash.Add(new HashEntry("MarkdownReport", job.MarkdownReport));
+        }
+        
+        if (job.ExitCode != null)
+        {
+            hash.Add(new HashEntry("ExitCode", job.ExitCode));
+        }
+            
+
+        return hash.ToArray();
     }
 
     private Job RedisHashToJob(string id, HashEntry[] hash)

@@ -4,16 +4,18 @@ using Sharpbench.Core;
 
 namespace SharpbenchApi;
 
-public class RealtimeClientsNotifier
+public class RealtimeClientsNotifier(ILogger<RealtimeClientsNotifier> logger)
 {
     ConcurrentDictionary<WebSocket, ClientEntry> realTimeClients = new();
 
     public Task RealTimeSyncWithClient(WebSocket client)
     {
+        logger.LogInformation("Realtime communication established with new client");
         var tcs = new TaskCompletionSource();
         realTimeClients.TryAdd(client, new ClientEntry(client, tcs));
-        // TODO how to detect when client is closed
-        realTimeClients.Remove(client, out _);
+        // the task will be complete when we detect that the connection is closed
+        // or all communication has ended.
+        // This prevents the caller from terminating prematurely and abruptly closing the connection
         return tcs.Task;
     }
 
@@ -43,7 +45,6 @@ public class RealtimeClientsNotifier
         foreach (var kvp in realTimeClients)
         {
             var client = kvp.Value;
-            await client.Socket.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
             tasks.Add(TrySendToClient(kvp.Key, message));
         }
 
@@ -65,7 +66,9 @@ public class RealtimeClientsNotifier
             return false;
         }
 
+        logger.LogInformation("Attempt to send message to client");
         await clientEntry.Socket.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
+        logger.LogInformation("Sent message to client");
         return true;
     }
 }

@@ -21,9 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="json.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <ProjectReference Include="..\core\SharpbenchCore.csproj" />
   </ItemGroup>
 
 </Project>

@@ -9,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
 const WS_URL = import.meta.env.VITE_WS_BASE_URL || API_URL.replace("http", "ws");
 const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
+console.log('jobs updates at', JOB_UPDATES_URL);
 
 const INITIAL_CODE = `// visit https://benchmarkdotnet.org/ for more info on BenchmarkDotNet
 

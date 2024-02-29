@@ -9,12 +9,6 @@ builder.Services.AddSharpbench();
 builder.Services.AddSingleton<RealtimeClientsNotifier>();
 builder.Services.AddHostedService<RealtimeMessagesWorker>();
 
-
-//// TODO: use proper dependency injection
-//var jobs = new JobsTracker();
-//var runner = new JobRunner(jobs);
-//runner.RunJobs();
-
 var app = builder.Build();
 
 // See: https://github.com/ashmind/mirrorsharp
