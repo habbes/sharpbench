@@ -1,23 +1,27 @@
-namespace SharpbenchRunner;
+using Sharpbench.Core;
+
+namespace Sharpbench.Runner;
 
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
+    IJobRepository db;
+    IJobQueue queue;
 
-    public Worker(ILogger<Worker> logger)
+    public Worker(ILogger<Worker> logger, IJobRepository jobs, IJobQueue queue)
     {
         _logger = logger;
+        this.db = jobs;
+        this.queue = queue;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        await foreach (string jobId in queue.ListenForJobs(stoppingToken))
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-            await Task.Delay(1000, stoppingToken);
+            _logger.LogInformation($"Worker received job '{jobId}'");
+            var runner = new JobRunner(this._logger, this.db, jobId);
+            await runner.RunJob();
         }
     }
 }

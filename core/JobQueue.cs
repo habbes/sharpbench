@@ -11,12 +11,12 @@ public class JobQueue : IJobQueue
     RedisChannel jobsChannel;
     readonly AutoResetEvent jobsAvailableSignal;
 
-    public JobQueue(IDatabase db, ISubscriber sub,string queueKey, string jobsChannel)
+    public JobQueue(IDatabase db, ISubscriber sub,string queueKey)
     {
         this.db = db;
         this.sub = sub;
         this.queueKey = queueKey;
-        this.jobsChannel = new RedisChannel(jobsChannel, RedisChannel.PatternMode.Literal);
+        this.jobsChannel = new RedisChannel($"signals:{queueKey}", RedisChannel.PatternMode.Literal);
         this.jobsAvailableSignal = new AutoResetEvent(false);
     }
 
