@@ -7,12 +7,14 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     IJobRepository db;
     IJobQueue queue;
+    IJobMessageStream messagStream;
 
-    public Worker(ILogger<Worker> logger, IJobRepository jobs, IJobQueue queue)
+    public Worker(ILogger<Worker> logger, IJobRepository jobs, IJobQueue queue, IJobMessageStream messageStream)
     {
         _logger = logger;
         this.db = jobs;
         this.queue = queue;
+        this.messagStream = messageStream;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

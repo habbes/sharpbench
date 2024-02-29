@@ -1,16 +1,20 @@
 ﻿using Sharpbench.Core;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace Sharpbench.Runner;
 
 internal class JobRunner
 {
     IJobRepository jobs;
+    IJobMessageStream messages;
     ILogger<Worker> logger;
     string id;
-    public JobRunner(ILogger<Worker> logger, IJobRepository jobs, string jobId)
+
+    public JobRunner(string jobId, ILogger<Worker> logger, IJobRepository jobs, IJobMessageStream messageStream)
     {
         this.jobs = jobs;
+        this.messages = messageStream;
         this.id = jobId;
         this.logger = logger;
     }
@@ -58,7 +62,7 @@ internal class JobRunner
             this.logger.LogInformation($"Execution failed with exit code {exitCode}");
             Directory.Delete(tempProjectDir, recursive: true);
             var failedJob =  await this.jobs.ReportJobError(job.Id, exitCode);
-            await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
+            await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
 
             this.logger.LogInformation($"Deleting folder '{tempProjectDir}'");
             Directory.Delete(tempProjectDir, recursive: true);
@@ -76,7 +80,7 @@ internal class JobRunner
 
         var mdReport = File.ReadAllText(ghMdPath);
         var successJob = await this.jobs.ReportJobSuccess(job.Id, mdReport);
-        await BroadcastMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+        await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
 
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
@@ -221,7 +225,7 @@ internal class JobRunner
                     return;
                 }
 
-                await BroadcastMessage(new LogMessage("log", jobId, "stdout", args.Data));
+                await BroadcastLogMessage(new LogMessage("log", jobId, "stdout", args.Data));
             };
 
             process.ErrorDataReceived += async void (sender, args) =>
@@ -233,7 +237,7 @@ internal class JobRunner
                     return;
                 }
 
-                await BroadcastMessage(new LogMessage("log", jobId, "stderr", args.Data));
+                await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", args.Data));
             };
 
             bool started = process.Start();
@@ -283,7 +287,7 @@ internal class JobRunner
                     return;
                 }
 
-                await BroadcastMessage(new LogMessage("log", jobId, "stdout", args.Data));
+                await BroadcastLogMessage(new LogMessage("log", jobId, "stdout", args.Data));
             };
 
             process.ErrorDataReceived += async void (sender, args) =>
@@ -295,7 +299,7 @@ internal class JobRunner
                     return;
                 }
 
-                await BroadcastMessage(new LogMessage("log", jobId, "stderr", args.Data));
+                await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", args.Data));
             };
 
             bool started = process.Start();
@@ -317,27 +321,22 @@ internal class JobRunner
         }
     }
 
-    private async Task BroadcastMessage<T>(T message)
+    private Task BroadcastLogMessage(LogMessage message) => this.BroadcastMessage(message.JobId, JobMessageType.Log, message);
+
+    private Task BroadcastStatusMessage(JobCompleteMessage message) => this.BroadcastMessage(message.JobId, JobMessageType.Status, message);
+
+    private async Task BroadcastMessage<T>(string jobId, JobMessageType type, T message)
     {
         // TODO:
-        //var stream = new MemoryStream();
-        //JsonSerializer.Serialize(stream, message);
-        //stream.Position = 0;
-        //byte[] bytes = stream.ToArray();
-        //var data = new ArraySegment<byte>(bytes, 0, bytes.Length);
-        //// TODO: broadcast for simplicity, but should send messages to the right clients
-        //await BroadcastRawMessage(data);
+        var stream = new MemoryStream();
+        JsonSerializer.Serialize(stream, message);
+        stream.Position = 0;
+        byte[] data = stream.ToArray();
+
+        await BroadcastRawMessage(new JobMessage(jobId, type, data);
     }
 
-    private async Task BroadcastRawMessage(ArraySegment<byte> message)
-    {
-        // TODO:
-        //foreach (var kvp in realTimeClients)
-        //{
-        //    var client = kvp.Value;
-        //    await client.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
-        //}
-    }
+    private Task BroadcastRawMessage(JobMessage message) => this.messages.PublishMessage(message);
 
 }
 
