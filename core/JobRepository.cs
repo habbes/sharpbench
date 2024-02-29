@@ -1,26 +1,30 @@
 namespace Sharpbench.Core;
 using StackExchange.Redis;
 
-public class JobRepository
+public class JobRepository : IJobRepository
 {
     IDatabase db;
-    public JobRepository(IDatabase redisDb)
+    IJobQueue jobsQueue;
+    public JobRepository(IDatabase redisDb, IJobQueue jobsQueue)
     {
         this.db = redisDb;
+        this.jobsQueue = jobsQueue;
     }
-    public async Task<SubmitJsobResult> SubmitJob(string code)
+    public async Task<SubmitJobResult> SubmitJob(string code)
     {
         string id = Guid.NewGuid().ToString();
         var newJob = new Job(id, code, JobStatus.Queued);
         var jobHash = this.JobToRedisHash(newJob);
-        await this.db.HashSetAsync(this.GetJobKey(id), jobHash);
-        // TODO: add job to queue
-        return new SubmitJsobResult(newJob.Id, newJob.Status);
+
+        string jobKey = RedisHelpers.GetJobKey(id);
+        await this.db.HashSetAsync(jobKey, jobHash);
+        await this.jobsQueue.SubmitJob(id);
+        return new SubmitJobResult(newJob.Id, newJob.Status);
     }
 
     public async Task<Job> GetJob(string id)
     {
-        var hash = await this.db.HashGetAllAsync(this.GetJobKey(id));
+        var hash = await this.db.HashGetAllAsync(RedisHelpers.GetJobKey(id));
         var job = this.RedisHashToJob(id, hash);
         return job;
     }
@@ -49,7 +53,7 @@ public class JobRepository
             new("MarkdownReport", markdownResult)
         };
 
-        await this.db.HashSetAsync(this.GetJobKey(jobId), update);
+        await this.db.HashSetAsync(RedisHelpers.GetJobKey(jobId), update);
         var updatedJob = await this.GetJob(jobId);
         return updatedJob;
     }
@@ -96,6 +100,4 @@ public class JobRepository
 
         return job;
     }
-
-    private string GetJobKey(string id) => $"jobs:{id}";
 }

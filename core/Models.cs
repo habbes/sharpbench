@@ -1,6 +1,6 @@
 ﻿namespace Sharpbench.Core;
 
-public record SubmitJsobResult(string Id, JobStatus Status);
+public record SubmitJobResult(string Id, JobStatus Status);
 
 public enum JobStatus
 {
