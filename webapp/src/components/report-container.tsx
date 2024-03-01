@@ -6,9 +6,9 @@ export function ReportContainer({ job } : { job : Job }) {
   return (
     <>
     {
-      job.status === 'completed' ?
+      job.status === 'Completed' ?
         <Markdown remarkPlugins={[remarkGfm]}>{ job.markdownReport }</Markdown>
-      : job.status === 'error' ?
+      : job.status === 'Error' ?
         <div className="font-mono">
           Execution failed with exit code { job.exitCode}. Check out the logs for more details.
         </div>

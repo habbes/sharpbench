@@ -1,7 +1,10 @@
-﻿namespace Sharpbench.Core;
+﻿using System.Text.Json.Serialization;
+
+namespace Sharpbench.Core;
 
 public record SubmitJobResult(string Id, JobStatus Status);
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum JobStatus
 {
     Queued,

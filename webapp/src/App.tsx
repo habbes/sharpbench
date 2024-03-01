@@ -109,7 +109,7 @@ export function App() {
           isShowingJobsSidebar &&
           (
             <div className="w-[300px] border-r border-r-gray-200 h-full">
-              <JobsSidebar jobs={jobs} onSelectJob={setCurrentJobId}/>
+              <JobsSidebar jobs={jobs} onSelectJob={setCurrentJobId} selectedJobId={currentJobId}/>
             </div>
           )
         }

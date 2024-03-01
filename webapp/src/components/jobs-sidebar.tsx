@@ -5,25 +5,31 @@ import { DotFilledIcon, ClockIcon, Cross2Icon, CheckCircledIcon } from "@radix-u
 type JobsSidebarProps = {
   jobs: Job[],
   onSelectJob?: (jobId: string) => unknown,
+  selectedJobId?: string;
 }
 
-export function JobsSidebar({ jobs, onSelectJob } : JobsSidebarProps) {
+export function JobsSidebar({ jobs, onSelectJob, selectedJobId } : JobsSidebarProps) {
   return (
     <aside className="overflow-y-auto h-full">
       {
         jobs.map(job => {
-          return <JobItem key={job.id} job={job} onClick={() => onSelectJob && onSelectJob(job.id)}/>
+          return <JobItem
+            key={job.id}
+            job={job}
+            selected={selectedJobId === job.id}
+            onClick={() => onSelectJob && onSelectJob(job.id)}
+          />
         })
       }
     </aside>
   )
 }
 
-function JobItem({ job, onClick } : { job: Job, onClick: () => unknown }) {
+function JobItem({ job, onClick, selected } : { job: Job, selected?: boolean, onClick: () => unknown }) {
   return (
     <div
       onClick={onClick}
-      className="px-4 py-2 border-b border-b-gray-200 cursor-pointer flex flex-col gap-2 items-stretch hover:bg-gray-100"
+      className={`px-4 py-2 border-b border-b-gray-200 cursor-pointer flex flex-col gap-2 items-stretch hover:bg-gray-50 ${selected ? 'bg-violet-50' : ''}`}
     >
       <div className="text-xs">
         {job.id}
@@ -33,15 +39,15 @@ function JobItem({ job, onClick } : { job: Job, onClick: () => unknown }) {
           <JobStatus status={job.status} />
         </div>
         <div className="text-xs text-gray-500">
-          { job.status === 'progress' &&
-            <span>Started at { job.startedAt }</span>
+          { job.status === 'Progress' &&
+            <span>Started at { formatDateString(job.startedAt!) }</span>
           }
           {
-            (job.status === 'completed' || job.status === 'error') &&
-            <span>Completed at { job.completedAt }</span>
+            (job.status === 'Completed' || job.status === 'Error') &&
+            <span>Completed at { formatDateString(job.completedAt!) }</span>
           }
-          { job.status === 'queued' &&
-            <span>Created at { job.createdAt }</span>
+          { job.status === 'Queued' &&
+            <span>Created at { formatDateString(job.createdAt!) }</span>
           }
         </div>
       </div>
@@ -51,14 +57,14 @@ function JobItem({ job, onClick } : { job: Job, onClick: () => unknown }) {
 
 function JobStatus({ status } : { status: Job["status"]}) {
   return (
-    status === 'queued' ?
+    status === 'Queued' ?
       <div className="inline-flex gap-1 items-center text-xs text-gray-500"><ClockIcon /> Queued</div>
-    : status === 'progress' ?
+    : status === 'Progress' ?
       <div className="inline-flex gap-1 items-center text-xs text-orange-500">
         <DotFilledIcon color="orange" />
         Running
       </div>
-    : status === 'completed' ?
+    : status === 'Completed' ?
       <div className="inline-flex gap-1 items-center text-xs text-green-600">
         <CheckCircledIcon color="green" />
         Completed
@@ -70,4 +76,9 @@ function JobStatus({ status } : { status: Job["status"]}) {
         Failed
       </div>
   )
+}
+
+function formatDateString(dateString: string) {
+  const date = new Date(dateString);
+  return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`
 }

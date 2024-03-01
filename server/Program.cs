@@ -23,8 +23,14 @@ app.MapMirrorSharp("/mirrorsharp");
 
 app.MapPost("/run", async ([FromServices] IJobRepository jobs, RunArgs args) =>
 {
-    var result = await jobs.SubmitJob(args.Code);
-    return result;
+    var job = await jobs.SubmitJob(args.Code);
+    return job;
+});
+
+app.MapGet("/jobs/{jobId}", async ([FromServices] IJobRepository jobs, [FromRoute] string jobId) =>
+{
+    var job = await jobs.GetJob(jobId);
+    return job;
 });
 
 app.MapGet("/status", () =>

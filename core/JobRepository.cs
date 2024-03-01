@@ -10,7 +10,7 @@ internal class JobRepository : IJobRepository
         this.db = redisDb;
         this.jobsQueue = jobsQueue;
     }
-    public async Task<SubmitJobResult> SubmitJob(string code)
+    public async Task<Job> SubmitJob(string code)
     {
         string id = Guid.NewGuid().ToString();
         var newJob = new Job(id, code, JobStatus.Queued);
@@ -19,7 +19,7 @@ internal class JobRepository : IJobRepository
         string jobKey = RedisHelpers.GetJobKey(id);
         await this.db.HashSetAsync(jobKey, jobHash);
         await this.jobsQueue.SubmitJob(id);
-        return new SubmitJobResult(newJob.Id, newJob.Status);
+        return newJob;
     }
 
     public async Task<Job> GetJob(string id)

@@ -28,4 +28,4 @@ export type Job = {
   markdownReport?: string
 }
 
-export type JobStatus = 'queued'|'progress'|'error'|'completed';
+export type JobStatus = 'Queued'|'Progress'|'Error'|'Completed';
