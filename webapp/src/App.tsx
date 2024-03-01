@@ -23,7 +23,10 @@ export function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [currentJobId, setCurrentJobId] = useState<string>();
-  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(JOB_UPDATES_URL);
+  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(JOB_UPDATES_URL, {
+    retryOnError: true,
+    shouldReconnect: () => true
+  });
 
   const currentLogs = useMemo(() => {
     if (!currentJobId) return [];
