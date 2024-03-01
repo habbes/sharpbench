@@ -116,7 +116,7 @@ export function App() {
         <div className="flex-1 h-full">
           <CodeEditor
             serverUrl={EDITOR_SERVICE_URL}
-            initialCode={INITIAL_CODE}
+            code={currentJob ? currentJob.code : INITIAL_CODE}
             onTextChange={setCode}
           />
         </div>
