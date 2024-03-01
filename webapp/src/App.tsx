@@ -51,8 +51,8 @@ export function App() {
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
       if (jobIndex === -1) return;
       const job = jobs[jobIndex];
-      if (job.status !== 'queued') return;
-      const result = updateJob(jobs, jobIndex, { status: 'progress', startedAt: new Date().toString() });
+      if (job.status !== 'Queued') return;
+      const result = updateJob(jobs, jobIndex, { status: 'Progress', startedAt: new Date().toString() });
       if (!result.success) return;
       setJobs(result.jobs);
     }
