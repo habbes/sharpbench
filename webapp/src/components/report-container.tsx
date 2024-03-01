@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 
 export function ReportContainer({ job } : { job : Job }) {
   return (
-    <>
+    <div className="p-4">
     {
       job.status === 'Completed' ?
         <Markdown remarkPlugins={[remarkGfm]}>{ job.markdownReport }</Markdown>
@@ -15,6 +15,6 @@ export function ReportContainer({ job } : { job : Job }) {
       :
         <div>Results not ready. Check again after the job is completed.</div>
     }
-    </>
+    </div>
   );
 }
