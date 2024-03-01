@@ -40,14 +40,14 @@ function JobItem({ job, onClick, selected } : { job: Job, selected?: boolean, on
         </div>
         <div className="text-xs text-gray-500">
           { job.status === 'Progress' &&
-            <span>Started on { formatDateString(job.startedAt!) }</span>
+            <span>Started at { formatDateString(job.startedAt!) }</span>
           }
           {
             (job.status === 'Completed' || job.status === 'Error') &&
-            <span>Completed on { formatDateString(job.completedAt!) }</span>
+            <span>Completed at { formatDateString(job.completedAt!) }</span>
           }
           { job.status === 'Queued' &&
-            <span>Created on { formatDateString(job.createdAt!) }</span>
+            <span>Created at { formatDateString(job.createdAt!) }</span>
           }
         </div>
       </div>
@@ -80,5 +80,6 @@ function JobStatus({ status } : { status: Job["status"]}) {
 
 function formatDateString(dateString: string) {
   const date = new Date(dateString);
-  return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`
+  // return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`
+  return date.toLocaleTimeString(); // TODO: show only time for now because the full date might overflow the width
 }
