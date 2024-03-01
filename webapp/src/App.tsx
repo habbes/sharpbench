@@ -34,7 +34,7 @@ export function App() {
 
   useEffect(() => {
     if (!lastJsonMessage) return;
-    
+    console.log('received message', lastJsonMessage);
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
@@ -42,8 +42,14 @@ export function App() {
         return;
       }
 
-      const job = jobs[jobIndex];
-      job.completedAt = new Date().toString();
+      const result = updateJob(jobs, jobIndex, {
+        status: lastJsonMessage.Job.ExitCode === 0 ? 'Completed' : 'Error',
+        markdownReport: lastJsonMessage.Job.MarkdownResult,
+        completedAt: new Date().toString()
+      })
+      
+      if (result.success) return;
+      setJobs(result.jobs);
     } else {
       setLogs(logs => [...logs, lastJsonMessage]);
       // TODO: the update should be done from the API

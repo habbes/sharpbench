@@ -40,14 +40,14 @@ function JobItem({ job, onClick, selected } : { job: Job, selected?: boolean, on
         </div>
         <div className="text-xs text-gray-500">
           { job.status === 'Progress' &&
-            <span>Started at { formatDateString(job.startedAt!) }</span>
+            <span>Started on { formatDateString(job.startedAt!) }</span>
           }
           {
             (job.status === 'Completed' || job.status === 'Error') &&
-            <span>Completed at { formatDateString(job.completedAt!) }</span>
+            <span>Completed on { formatDateString(job.completedAt!) }</span>
           }
           { job.status === 'Queued' &&
-            <span>Created at { formatDateString(job.createdAt!) }</span>
+            <span>Created on { formatDateString(job.createdAt!) }</span>
           }
         </div>
       </div>
