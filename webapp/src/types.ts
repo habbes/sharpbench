@@ -6,7 +6,7 @@ export type JobCompleteMessage = {
   Job: {
     Id: string;
     ExitCode: number;
-    MarkdownResult: string;
+    MarkdownReport: string;
   }
 }
 

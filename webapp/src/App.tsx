@@ -44,7 +44,7 @@ export function App() {
 
       const result = updateJob(jobs, jobIndex, {
         status: lastJsonMessage.Job.ExitCode === 0 ? 'Completed' : 'Error',
-        markdownReport: lastJsonMessage.Job.MarkdownResult,
+        markdownReport: lastJsonMessage.Job.MarkdownReport,
         completedAt: new Date().toString()
       });
       
