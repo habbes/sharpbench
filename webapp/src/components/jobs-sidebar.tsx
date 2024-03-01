@@ -1,39 +1,30 @@
-import { DotFilledIcon, ClockIcon, CheckIcon, Cross2Icon, CheckCircledIcon } from "@radix-ui/react-icons";
+import { Job } from "@/types";
+import { DotFilledIcon, ClockIcon, Cross2Icon, CheckCircledIcon } from "@radix-ui/react-icons";
 
-type Job = {
-  id: string,
-  startedAt: Date,
-  completedAt?: Date,
-  createdAt: Date,
-  status: 'queued'|'progress'|'completed'|'error'
-};
 
-export function JobsSidebar() {
-  const jobs: Job[] = [];
-  for (let i = 0; i < 100; i++) {
-    jobs.push({
-      id: `d8c38ce2-0e1e-4ff5-bd20-cfc53520f05f${i}`,
-      status: ['queued', 'progress', 'completed', 'error'][i % 4] as Job["status"],
-      startedAt: new Date(),
-      completedAt: new Date(),
-      createdAt: new Date(),
-    });
-  }
+type JobsSidebarProps = {
+  jobs: Job[],
+  onSelectJob?: (jobId: string) => unknown,
+}
 
+export function JobsSidebar({ jobs, onSelectJob } : JobsSidebarProps) {
   return (
     <aside className="overflow-y-auto h-full">
       {
         jobs.map(job => {
-          return <JobItem key={job.id} job={job} />
+          return <JobItem key={job.id} job={job} onClick={() => onSelectJob && onSelectJob(job.id)}/>
         })
       }
     </aside>
   )
 }
 
-function JobItem({ job } : { job: Job }) {
+function JobItem({ job, onClick } : { job: Job, onClick: () => unknown }) {
   return (
-    <div className="px-4 py-2 border-b border-b-gray-200 cursor-pointer flex flex-col gap-2 items-stretch hover:bg-gray-100">
+    <div
+      onClick={onClick}
+      className="px-4 py-2 border-b border-b-gray-200 cursor-pointer flex flex-col gap-2 items-stretch hover:bg-gray-100"
+    >
       <div className="text-xs">
         {job.id}
       </div>
@@ -43,14 +34,14 @@ function JobItem({ job } : { job: Job }) {
         </div>
         <div className="text-xs text-gray-500">
           { job.status === 'progress' &&
-            <span>Started at { job.startedAt.toLocaleDateString() }</span>
+            <span>Started at { job.startedAt }</span>
           }
           {
             (job.status === 'completed' || job.status === 'error') &&
-            <span>Completed at { job.completedAt?.toLocaleDateString() }</span>
+            <span>Completed at { job.completedAt }</span>
           }
           { job.status === 'queued' &&
-            <span>Created at { job.createdAt.toLocaleDateString() }</span>
+            <span>Created at { job.createdAt }</span>
           }
         </div>
       </div>
