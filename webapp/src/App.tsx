@@ -4,6 +4,8 @@ import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
 import { ResultsContainer } from "@/components/results-container";
+import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons";
+import { INITIAL_CODE } from "./initial-code";
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -12,52 +14,45 @@ const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 console.log('jobs updates at', JOB_UPDATES_URL);
 
-const INITIAL_CODE = `// visit https://benchmarkdotnet.org/ for more info on BenchmarkDotNet
-
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
-
-[MemoryDiagnoser]
-public class Benchmarks
-{
-    // Write your benchmarks here
-    const int size = 1_000_000_000;
-    private int[] array = new int[size];
-
-    public Benchmarks()
-    {
-      for (int i = 0; i < size; i++)
-      {
-        array[i] = i + 1;
-      }
-    }
-
-    [Benchmark]
-    public int ArraySum()
-    {
-        int sum = 0;
-        for (int i = 0; i < array.Length; i++)
-        {
-            sum += array[i];
-        }
-
-        return sum;
-    }
-}
-`
-
 export function App() {
   const [code, setCode] = useState(INITIAL_CODE);
+  const [isShowingJobsSidebar, setIsShowingJobsSidebar] = useState(false);
 
   function handleRun() {
     if (!code) return;
     submitCodeRun(code);
   }
 
+  function toggleShowJobsSidebar() {
+    setIsShowingJobsSidebar(!isShowingJobsSidebar);
+  }
+
   return (
     <main className="h-screen bg-red flex flex-col">
-      <div className="h-[50px] px-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
-        <div>
+      <div className="h-[50px] pr-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
+        <div className="flex items-center h-full">
+          {!isShowingJobsSidebar ?
+            (
+              <div onClick={toggleShowJobsSidebar}
+                className="px-4 border-r border-r-gray-200 mr-4 h-full flex items-center cursor-pointer"
+                title="Reveal job history"
+              >
+                <DoubleArrowRightIcon />
+              </div>
+            ) :
+            (
+              <div onClick={toggleShowJobsSidebar}
+                className="flex w-[300px] h-full px-4 items-center border-r border-r-gray-200 justify-between mr-4"
+              >
+                <div className="text-sm font-semibold">
+                  Jobs History
+                </div>
+                <div className="cursor-pointer" title="Hide job history">
+                  <DoubleArrowLeftIcon />
+                </div>
+              </div>
+            )
+          }
           <Button onClick={handleRun} className="inline-flex flex gap-2 items-center"><PlayIcon /> Run</Button>
         </div>
         <div>
