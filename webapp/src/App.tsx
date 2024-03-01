@@ -38,17 +38,14 @@ export function App() {
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
-      if (jobIndex === -1) {
-        return;
-      }
 
       const result = updateJob(jobs, jobIndex, {
         status: lastJsonMessage.Job.ExitCode === 0 ? 'Completed' : 'Error',
         markdownReport: lastJsonMessage.Job.MarkdownResult,
         completedAt: new Date().toString()
-      })
+      });
       
-      if (result.success) return;
+      if (!result.success) return;
       setJobs(result.jobs);
     } else {
       setLogs(logs => [...logs, lastJsonMessage]);
