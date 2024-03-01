@@ -4,6 +4,7 @@ import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
 import { ResultsContainer } from "@/components/results-container";
+import { JobsSidebar } from "@/components/jobs-sidebar";
 import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons";
 import { INITIAL_CODE } from "./initial-code";
 
@@ -62,6 +63,14 @@ export function App() {
         </div>
       </div>
       <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
+        {
+          isShowingJobsSidebar &&
+          (
+            <div className="w-[300px] border-r border-r-gray-200 h-full">
+              <JobsSidebar />
+            </div>
+          )
+        }
         <div className="flex-1 h-full">
           <CodeEditor
             serverUrl={EDITOR_SERVICE_URL}
