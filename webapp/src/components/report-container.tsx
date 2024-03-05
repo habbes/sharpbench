@@ -28,7 +28,7 @@ function MarkdownReport({ content } : { content?: string }) {
         tr(props) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { node, ...rest } = props;
-          return <tr className="border" {...rest} />
+          return <tr className="border even:bg-slate-50" {...rest} />
         },
         th(props) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
