@@ -7,7 +7,7 @@ export function ReportContainer({ job } : { job : Job }) {
     <div className="p-4">
     {
       job.status === 'Completed' ?
-        <Markdown remarkPlugins={[remarkGfm]}>{ job.markdownReport }</Markdown>
+        <MarkdownReport content={job.markdownReport} />
       : job.status === 'Error' ?
         <div className="font-mono">
           Execution failed with exit code { job.exitCode}. Check out the logs for more details.
@@ -17,4 +17,32 @@ export function ReportContainer({ job } : { job : Job }) {
     }
     </div>
   );
+}
+
+
+function MarkdownReport({ content } : { content?: string }) {
+  return (
+    <Markdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        tr(props) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { node, ...rest } = props;
+          return <tr className="border" {...rest} />
+        },
+        th(props) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { node, ...rest} = props;
+          return <th className="border py-2 px-4" {...rest} />
+        },
+        td(props) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { node, ...rest } = props;
+          return <td className="border py-2 px-4" {...rest} />
+        }
+      }}
+    >
+      {content}
+    </Markdown>
+  )
 }
