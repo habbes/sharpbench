@@ -45,6 +45,8 @@ public class Benchmarks
     public void ArraySumSIMD() => Compute.ArraySumSIMD(A);
 
 }
+
+
 public static class Compute
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
