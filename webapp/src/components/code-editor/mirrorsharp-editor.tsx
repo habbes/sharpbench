@@ -1,16 +1,11 @@
 import { useRef, useEffect } from 'react'
 import "mirrorsharp-codemirror-6-preview/mirrorsharp.css";
 import mirrorsharp, { MirrorSharpInstance } from 'mirrorsharp-codemirror-6-preview';
-
-export interface CodeEditorProps {
-    serverUrl: string;
-    onTextChange?: (text: string) => void;
-    code?: string;
-}
+import { CodeEditorProps } from "./types";
 
 const LANGUAGE = 'C#';
 
-export function CodeEditor({
+export function MirrorSharpEditor({
     onTextChange,
     serverUrl,
     code
@@ -41,6 +36,6 @@ export function CodeEditor({
   }, [code, onTextChange, serverUrl]);
 
   return (
-    <div className="flex-1 overflow-y-auto h-full" style={{height:"calc(100dvh - 50px)"}} ref={containerRef}></div>
+    <div style={{height:"100%"}} ref={containerRef}></div>
   );
 }
