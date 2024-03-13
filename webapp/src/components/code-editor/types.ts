@@ -1,5 +1,5 @@
 export interface CodeEditorProps {
     serverUrl: string;
-    onTextChange?: (text: string) => void;
+    onTextChange: (text: string) => void;
     code?: string;
 }
