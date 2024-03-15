@@ -9,6 +9,7 @@ import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons
 import { INITIAL_CODE } from "./initial-code";
 import { Job, LogMessage, RealtimeMessage } from './types';
 import useWebSocket from 'react-use-websocket';
+import { serializeSession } from './lib';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -75,6 +76,14 @@ export function App() {
     setIsShowingJobsSidebar(!isShowingJobsSidebar);
   }
 
+  function handleCodeChange(newCode: string) {
+    const started = performance.now();
+    const serialized = serializeSession({ code: newCode });
+    const ended = performance.now();
+    console.log('serialized in', ended - started, 'serialized size', serialized.length, 'serialized', serialized, 'new code', newCode, newCode.length);
+    setCode(newCode);
+  }
+
   return (
     <main className="h-screen bg-red flex flex-col">
       <div className="h-[50px] pr-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
@@ -122,7 +131,7 @@ export function App() {
           <CodeEditor
             serverUrl={EDITOR_SERVICE_URL}
             code={currentJob ? currentJob.code : INITIAL_CODE}
-            onTextChange={setCode}
+            onTextChange={handleCodeChange}
           />
         </div>
         <div className="flex-1 h-full border-l border-l-gray-200">
