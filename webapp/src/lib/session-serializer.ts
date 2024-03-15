@@ -17,7 +17,7 @@ export function serializeSession(args: EncodeArgs) {
 export function deserializeSession(serialized: string) {
     const decodedString = atob(serialized);
     const decodedPayload = JSON.parse(decodedString);
-    return decodedPayload;
+    return decodedPayload as EncodedPayload;
 }
 
 export type EncodedPayload = V01EncodedPayload;
