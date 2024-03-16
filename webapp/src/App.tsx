@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { PlayIcon } from '@radix-ui/react-icons';
 import './App.css'
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons
 import { INITIAL_CODE } from "./initial-code";
 import { Job, LogMessage, RealtimeMessage } from './types';
 import useWebSocket from 'react-use-websocket';
+import { EncodeArgs, deserializeSession, serializeSession } from './lib';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -17,7 +18,12 @@ const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 
 export function App() {
-  const [code, setCode] = useState(INITIAL_CODE);
+  const [initialCode] = useState(() => {
+    const decoded = decodeUrlSession();
+    console.log('initial code', decoded);
+    return decoded ? decoded.code : INITIAL_CODE
+  });
+  const [code, setCode] = useState(initialCode);
   const [isShowingJobsSidebar, setIsShowingJobsSidebar] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<LogMessage[]>([]);
@@ -75,6 +81,11 @@ export function App() {
     setIsShowingJobsSidebar(!isShowingJobsSidebar);
   }
 
+  const handleCodeChange = useCallback((newCode: string) => {
+    encodeSessionInUrl({ code: newCode })
+    setCode(newCode);
+  }, [setCode]);
+
   return (
     <main className="h-screen bg-red flex flex-col">
       <div className="h-[50px] pr-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
@@ -121,8 +132,8 @@ export function App() {
         <div className="flex-1 h-full">
           <CodeEditor
             serverUrl={EDITOR_SERVICE_URL}
-            code={currentJob ? currentJob.code : INITIAL_CODE}
-            onTextChange={setCode}
+            code={currentJob ? currentJob.code : initialCode}
+            onTextChange={handleCodeChange}
           />
         </div>
         <div className="flex-1 h-full border-l border-l-gray-200">
@@ -163,4 +174,21 @@ function updateJob(jobs: Job[], index: number, update: Partial<Job>) {
   const updatedJobs = [...jobs];
   updatedJobs[index] = updated;
   return { success: true, jobs: updatedJobs }
+}
+
+function decodeUrlSession() {
+  const hash = window.location.hash;
+  // hash is in the form #s:{serializedSession}
+  const [, serializedSession] = hash.split(':', 2);
+  if (!serializedSession) {
+    return;
+  }
+
+  const decoded = deserializeSession(serializedSession);
+  return decoded;
+}
+
+function encodeSessionInUrl(args : EncodeArgs) {
+  const serialized = serializeSession(args);
+  window.history.replaceState(null, "", `#s:${serialized}`);
 }
