@@ -17,24 +17,6 @@ const WS_URL = import.meta.env.VITE_WS_BASE_URL || API_URL.replace("http", "ws")
 const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 
-function decodeUrlSession() {
-  const hash = window.location.hash;
-  // hash is in the form #s:{serializedSession}
-  console.log('hash', hash);
-  const [, serializedSession] = hash.split(':', 2);
-  if (!serializedSession) {
-    return;
-  }
-
-  const decoded = deserializeSession(serializedSession);
-  return decoded;
-}
-
-function encodeSessionInUrl(args : EncodeArgs) {
-  const serialized = serializeSession(args);
-  window.history.replaceState(null, "", `#s:${serialized}`);
-}
-
 export function App() {
   const [initialCode] = useState(() => {
     const decoded = decodeUrlSession();
@@ -192,4 +174,21 @@ function updateJob(jobs: Job[], index: number, update: Partial<Job>) {
   const updatedJobs = [...jobs];
   updatedJobs[index] = updated;
   return { success: true, jobs: updatedJobs }
+}
+
+function decodeUrlSession() {
+  const hash = window.location.hash;
+  // hash is in the form #s:{serializedSession}
+  const [, serializedSession] = hash.split(':', 2);
+  if (!serializedSession) {
+    return;
+  }
+
+  const decoded = deserializeSession(serializedSession);
+  return decoded;
+}
+
+function encodeSessionInUrl(args : EncodeArgs) {
+  const serialized = serializeSession(args);
+  window.history.replaceState(null, "", `#s:${serialized}`);
 }
