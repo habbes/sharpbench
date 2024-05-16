@@ -79,16 +79,26 @@ internal class JobRunner
 
         // success
 
-        var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
-        var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
-        if (ghMdPath == null)
+        try
         {
-            throw new Exception("Could not find markdown report");
-        }
+            var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
+            var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
+            if (ghMdPath == null)
+            {
+                throw new Exception("Could not find markdown report");
+            }
 
-        var mdReport = File.ReadAllText(ghMdPath);
-        var successJob = await this.jobs.ReportJobSuccess(job.Id, mdReport);
-        await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+            var mdReport = File.ReadAllText(ghMdPath);
+            var successJob = await this.jobs.ReportJobSuccess(job.Id, mdReport);
+            await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+        }
+        catch (Exception ex)
+        {
+            // exit code was 0, but could not find result. Build error probably occurred.
+            this.logger.LogError($"Failed to report job succes: {ex.Message}");
+            var failedJob = await this.jobs.ReportJobError(job.Id, -1);
+            await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
+        }
 
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
@@ -144,6 +154,7 @@ internal class JobRunner
 
     private async Task<(int exitCode, string container)> CreateContainer(string jobId, string projectDir)
     {
+        await this.BroadcastLogMessage(new LogMessage("log", jobId, "stdout", "Building project..."));
         var image = "habbes/sharpbench-runner";
         string container = Path.GetRandomFileName().Split('.')[0];
         int exitCode = await RunDockerStep(
@@ -169,7 +180,8 @@ internal class JobRunner
         return RunDockerStep(
             jobId,
             projectDir,
-            $"logs --follow --details {containerName}"
+            $"logs --follow --details {containerName}",
+            streamLogs: true
         );
     }
 
@@ -182,7 +194,7 @@ internal class JobRunner
         );
     }
 
-    private async Task<int> RunDockerStep(string jobId, string projectDir, string args)
+    private async Task<int> RunDockerStep(string jobId, string projectDir, string args, bool streamLogs = false)
     {
         try
         {
@@ -196,32 +208,33 @@ internal class JobRunner
             };
             this.logger.LogInformation("Started process");
             // TODO should stream the outputs to the client instead
-            // this.logger.LogInformation("stdout: {0}", await process.StandardOutput.ReadToEndAsync());
-            // this.logger.LogInformation("stderr: {0}", await process.StandardError.ReadToEndAsync());
 
-            process.OutputDataReceived += async void (sender, args) =>
+            if (streamLogs)
             {
-                Console.ResetColor();
-                this.logger.LogInformation(args.Data);
-                if (args.Data == null)
+                process.OutputDataReceived += async void (sender, args) =>
                 {
-                    return;
-                }
+                    Console.ResetColor();
+                    this.logger.LogInformation(args.Data);
+                    if (args.Data == null)
+                    {
+                        return;
+                    }
 
-                await BroadcastLogMessage(new LogMessage("log", jobId, "stdout", args.Data));
-            };
+                    await BroadcastLogMessage(new LogMessage("log", jobId, "stdout", args.Data));
+                };
 
-            process.ErrorDataReceived += async void (sender, args) =>
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                this.logger.LogInformation(args.Data);
-                if (args.Data == null)
+                process.ErrorDataReceived += async void (sender, args) =>
                 {
-                    return;
-                }
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    this.logger.LogInformation(args.Data);
+                    if (args.Data == null)
+                    {
+                        return;
+                    }
 
-                await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", args.Data));
-            };
+                    await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", args.Data));
+                };
+            }
 
             bool started = process.Start();
             if (!started)

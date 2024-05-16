@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import "mirrorsharp-codemirror-6-preview/mirrorsharp.css";
 import mirrorsharp, { MirrorSharpInstance } from 'mirrorsharp-codemirror-6-preview';
 import { CodeEditorProps } from "./types";
+import { logger } from '@/logger';
 
 const LANGUAGE = 'C#';
 
@@ -19,7 +20,7 @@ export function MirrorSharpEditor({
       ms.current.setText(code);
     }
     else if (!ms.current) {
-      console.log('rendering ms');
+      logger.log('rendering ms');
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       ms.current = mirrorsharp(
