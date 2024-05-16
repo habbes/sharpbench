@@ -10,6 +10,7 @@ import { INITIAL_CODE } from "./initial-code";
 import { Job, LogMessage, RealtimeMessage } from './types';
 import useWebSocket from 'react-use-websocket';
 import { EncodeArgs, deserializeSession, serializeSession } from './lib';
+import { logger } from './logger';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -20,7 +21,7 @@ const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 export function App() {
   const [initialCode] = useState(() => {
     const decoded = decodeUrlSession();
-    console.log('initial code', decoded);
+    logger.log('initial code', decoded);
     return decoded ? decoded.code : INITIAL_CODE
   });
   const [code, setCode] = useState(initialCode);
@@ -42,7 +43,7 @@ export function App() {
 
   useEffect(() => {
     if (!lastJsonMessage) return;
-    console.log('received message', lastJsonMessage);
+    logger.log('received message', lastJsonMessage);
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
@@ -145,7 +146,7 @@ export function App() {
 }
 
 async function submitCodeRun(code: string): Promise<Job> {
-  console.log('submitting code run', code);
+  logger.log('submitting code run', code);
   const resp = await fetch(`${API_URL}/run`, {
     method: 'POST',
     headers: {
@@ -158,7 +159,7 @@ async function submitCodeRun(code: string): Promise<Job> {
   });
 
   const data = await resp.json();
-  console.log('code run result', data);
+  logger.log('code run result', data);
   const job = data as Job; // TODO these fields should be included from API
   job.createdAt = new Date().toString();
   return job;

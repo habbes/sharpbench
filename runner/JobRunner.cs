@@ -79,16 +79,26 @@ internal class JobRunner
 
         // success
 
-        var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
-        var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
-        if (ghMdPath == null)
+        try
         {
-            throw new Exception("Could not find markdown report");
-        }
+            var benchmarkResultsDir = Path.Combine(tempProjectDir, "BenchmarkDotNet.Artifacts", "results");
+            var ghMdPath = Directory.GetFiles(benchmarkResultsDir).FirstOrDefault(f => f.EndsWith(".md"));
+            if (ghMdPath == null)
+            {
+                throw new Exception("Could not find markdown report");
+            }
 
-        var mdReport = File.ReadAllText(ghMdPath);
-        var successJob = await this.jobs.ReportJobSuccess(job.Id, mdReport);
-        await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+            var mdReport = File.ReadAllText(ghMdPath);
+            var successJob = await this.jobs.ReportJobSuccess(job.Id, mdReport);
+            await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, successJob));
+        }
+        catch (Exception ex)
+        {
+            // exit code was 0, but could not find result. Build error probably occurred.
+            this.logger.LogError($"Failed to report job succes: {ex.Message}");
+            var failedJob = await this.jobs.ReportJobError(job.Id, -1);
+            await BroadcastStatusMessage(new JobCompleteMessage("jobComplete", job.Id, failedJob));
+        }
 
         // ensure project and result files were generated correctly
         foreach (var entry in Directory.GetFileSystemEntries(tempProjectDir))
