@@ -5,7 +5,7 @@ export function LogsContainer({ logs } : { logs: LogMessage[] }) {
     <div className="font-mono p-4 text-sm">
       {
         logs.map((message, index) => (
-          <div key={index} className={message.LogSource === 'stderr' ? 'text-red-400' : ''}>
+          <div key={index} className={message.LogSource === 'stderr' ? 'text-red-500' : ''}>
             { message.Message }
           </div>
         ))
