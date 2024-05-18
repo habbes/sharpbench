@@ -113,15 +113,16 @@ export function App() {
               </div>
             )
           }
-          <Button onClick={handleRun} className="inline-flex flex gap-2 items-center"><PlayIcon /> Run</Button>
+          <Button onClick={handleRun} className="inline-flex gap-2 items-center"><PlayIcon /> Run</Button>
         </div>
         <div>
           <div className="mr-5">
-            <span className="font-semibold">sharpbench</span>
+            <a className="font-semibold hover:underline" href="https://github.com/habbes/sharpbench-feedback" target="_blank">Feedback</a>
           </div>
         </div>
       </div>
-      <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
+      <div className="flex flex-1 max-w-[100dvw]" style={{height:"calc(100dvh - 50px)"}}>
+        <div>
         {
           isShowingJobsSidebar &&
           (
@@ -130,15 +131,18 @@ export function App() {
             </div>
           )
         }
-        <div className="flex-1 h-full">
-          <CodeEditor
-            serverUrl={EDITOR_SERVICE_URL}
-            code={currentJob ? currentJob.code : initialCode}
-            onTextChange={handleCodeChange}
-          />
         </div>
-        <div className="flex-1 h-full border-l border-l-gray-200">
-          <ResultsContainer logs={currentLogs} job={currentJob} />
+        <div className={`flex-1 flex h-full ${isShowingJobsSidebar ? 'max-w-[calc(100vw-300px)]' : 'max-w-[100vw]'}`}>
+          <div className=" w-1/2 h-full max-w-[50%]">
+            <CodeEditor
+              serverUrl={EDITOR_SERVICE_URL}
+              code={currentJob ? currentJob.code : initialCode}
+              onTextChange={handleCodeChange}
+            />
+          </div>
+          <div className="w-1/2 max-w-[50%] overflow-x-auto h-full border-l border-l-gray-200">
+            <ResultsContainer logs={currentLogs} job={currentJob} />
+          </div>
         </div>
       </div>
     </main>

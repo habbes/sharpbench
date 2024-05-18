@@ -44,17 +44,6 @@ internal class JobQueue : IJobQueue
 
         while (!clt.IsCancellationRequested)
         {
-            string? jobId = await this.GetNextJob();
-            if (jobId == null)
-            {
-                continue;
-            }
-
-            // hand over job to worker
-            // TODO: how to control number of concurrent jobs?
-            // TODO: consider using channels (see: https://www.youtube.com/watch?v=gT06qvQLtJ0)
-            // or create an IAsyncEnumerable stream
-            yield return jobId;
             // Instead of repeatedly trying to get the next job even when there isn't one
             // we wait for a signal that new jobs have arrived before we check again.
             // Ideally, we could have used a block pop operation to wait on the queue until a job
@@ -65,17 +54,37 @@ internal class JobQueue : IJobQueue
             // Add a timeout so that we can periodically check cancellation token for graceful shutdowns
             // or just in case a pub/sub message was not delivered (see: https://redis.io/docs/interact/pubsub/#delivery-semantics)
             this.jobsAvailableSignal.WaitOne(TimeSpan.FromSeconds(5));
+            string? jobId = await this.GetNextJob();
+            if (jobId == null)
+            {
+                continue;
+            }
+
+            // hand over job to worker
+            // TODO: how to control number of concurrent jobs?
+            // Since we use an async enumerable, consumer will pull a job
+            // when it's ready to process it. So consumer decides how many
+            // jobs it can pull, and it waits when there are no jobs available.
+            // TODO: Would channels be more suitable? (see: https://www.youtube.com/watch?v=gT06qvQLtJ0)
+            yield return jobId;
         }
     }
 
     private async Task<string?> GetNextJob()
     {
-        var result = await this.db.ListRightPopAsync(this.queueKey);
-        if (result.IsNull)
+        try
         {
+            var result = await this.db.ListRightPopAsync(this.queueKey);
+            if (result.IsNull)
+            {
+                return null;
+            }
+
+            return RedisHelpers.JobKeyToId(result!);
+        }
+        catch (RedisTimeoutException) {
+            // TODO: log this for reporting
             return null;
         }
-
-        return RedisHelpers.JobKeyToId(result!);
     }
 }
