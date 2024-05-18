@@ -121,7 +121,7 @@ export function App() {
           </div>
         </div>
       </div>
-      <div className="flex flex-1 max-w-full" style={{height:"calc(100dvh - 50px)"}}>
+      <div className="flex flex-1 max-w-[100dvw]" style={{height:"calc(100dvh - 50px)"}}>
         <div>
         {
           isShowingJobsSidebar &&
@@ -132,7 +132,7 @@ export function App() {
           )
         }
         </div>
-        <div className="flex-1 flex h-full max-w-full">
+        <div className={`flex-1 flex h-full ${isShowingJobsSidebar ? 'max-w-[calc(100vw-300px)]' : 'max-w-[100vw]'}`}>
           <div className=" w-1/2 h-full max-w-[50%]">
             <CodeEditor
               serverUrl={EDITOR_SERVICE_URL}
