@@ -63,7 +63,7 @@ internal class JobRunner
 
 
         CancellationTokenSource cancellation = new();
-        cancellation.CancelAfter(TimeSpan.FromMinutes(1));
+        cancellation.CancelAfter(TimeSpan.FromMinutes(8));
         
         // TODO: use bool + error details to track failure instead of exit codes
         int exitCode = 0;
@@ -75,10 +75,6 @@ internal class JobRunner
             exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir, cancellation.Token);
             this.logger.LogInformation("Execution complete");
         }
-
-        exitCode = -1;
-        this.logger.LogInformation("Job timed out and cancelled.");
-        await BroadcastLogMessage(new LogMessage("log", job.Id, "stderr", "The job exceeded the maximum allowed execution time."));
 
         if (exitCode != 0)
         {
@@ -144,7 +140,7 @@ internal class JobRunner
             return exitCode;
         }
 
-        exitCode = await RunContainer(jobId, projectDir, cancellationToken);
+        exitCode = await RunContainer(jobId, projectDir, container, cancellationToken);
         return exitCode;
     }
 
@@ -185,7 +181,7 @@ internal class JobRunner
         catch (OperationCanceledException)
         {
             this.logger.LogInformation("Job timed out and cancelled.");
-            await BroadcastLogMessage(new LogMessage("log", job.Id, "stderr", "The job exceeded the maximum allowed execution time."));
+            await BroadcastLogMessage(new LogMessage("log", jobId, "stderr", "The job exceeded the maximum allowed execution time."));
             failed = true;
         }
 
