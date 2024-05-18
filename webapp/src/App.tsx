@@ -113,11 +113,11 @@ export function App() {
               </div>
             )
           }
-          <Button onClick={handleRun} className="inline-flex flex gap-2 items-center"><PlayIcon /> Run</Button>
+          <Button onClick={handleRun} className="inline-flex gap-2 items-center"><PlayIcon /> Run</Button>
         </div>
         <div>
           <div className="mr-5">
-            <span className="font-semibold">sharpbench</span>
+            <a className="font-semibold hover:underline" href="https://github.com/habbes/sharpbench-feedback" target="_blank">Feedback</a>
           </div>
         </div>
       </div>
