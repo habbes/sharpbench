@@ -206,7 +206,7 @@ internal class JobRunner
                 RedirectStandardOutput = true,
                 Arguments = args
             };
-            this.logger.LogInformation("Started process");
+            this.logger.LogInformation($"Started docker process {args}");
             // TODO should stream the outputs to the client instead
 
             if (streamLogs)
