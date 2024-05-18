@@ -21,6 +21,7 @@ export function MonacoEditor({ code, onTextChange }: CodeEditorProps) {
       height="100%"
       defaultLanguage={"csharp"}
       defaultValue={code}
+      options={{minimap: { enabled: false }}}
       onMount={handleEditorMount}
       onChange={value => value !== undefined && onTextChange(value)}
     />
