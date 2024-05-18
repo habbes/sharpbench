@@ -13,7 +13,7 @@ export function ReportContainer({ job } : { job : Job }) {
           Execution failed {job.exitCode ? `with exit code ${job.exitCode}` : ''}. Check out the logs for more details.
         </div>
       :
-        <div className="text-xs">Results not ready. Check again after the job is completed.</div>
+        <div className="text-sm">Results not ready. Check again after the job is completed.</div>
     }
     </div>
   );
