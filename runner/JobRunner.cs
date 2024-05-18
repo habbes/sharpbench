@@ -54,7 +54,7 @@ internal class JobRunner
             File.Copy(file, destFile, overwrite: true);
         }
 
-        var userBenchmarkClass = Path.Combine(tempProjectDir, "Benhmarks.cs");
+        var userBenchmarkClass = Path.Combine(tempProjectDir, "Benchmarks.cs");
         this.logger.LogInformation($"Writing user code in {userBenchmarkClass}");
         File.WriteAllText(userBenchmarkClass, job.Code);
 
@@ -62,13 +62,23 @@ internal class JobRunner
         this.logger.LogInformation($"Running job {job.Id}");
 
 
-        int exitCode = await BuildBenchmarkProject(job.Id, tempProjectDir);
+        CancellationTokenSource cancellation = new();
+        cancellation.CancelAfter(TimeSpan.FromMinutes(1));
+        
+        // TODO: use bool + error details to track failure instead of exit codes
+        int exitCode = 0;
+
+        exitCode = await BuildBenchmarkProject(job.Id, tempProjectDir, cancellation.Token);
         this.logger.LogInformation("Build complete");
         if (exitCode == 0)
         {
-            exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
+            exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir, cancellation.Token);
             this.logger.LogInformation("Execution complete");
         }
+
+        exitCode = -1;
+        this.logger.LogInformation("Job timed out and cancelled.");
+        await BroadcastLogMessage(new LogMessage("log", job.Id, "stderr", "The job exceeded the maximum allowed execution time."));
 
         if (exitCode != 0)
         {
@@ -123,7 +133,7 @@ internal class JobRunner
         }
     }
 
-    private async Task<int> BuildBenchmarkProject(string jobId, string projectDir)
+    private async Task<int> BuildBenchmarkProject(string jobId, string projectDir, CancellationToken cancellationToken)
     {
         this.logger.LogInformation("Restoring benchmark project...");
         
@@ -134,31 +144,11 @@ internal class JobRunner
             return exitCode;
         }
 
-        exitCode = await StartContainer(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to start build container");
-            return exitCode;
-        }
-
-        exitCode = await StreamContainerLogs(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to stream build container logs");
-            return exitCode;
-        }
-
-        exitCode = await RemoveContainer(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to remove build container");
-            return exitCode;
-        }
-
+        exitCode = await RunContainer(jobId, projectDir, cancellationToken);
         return exitCode;
     }
 
-    private async Task<int> ExecuteBenchmarkProject(string jobId, string projectDir)
+    private async Task<int> ExecuteBenchmarkProject(string jobId, string projectDir, CancellationToken cancellationToken)
     {
         this.logger.LogInformation("Starting benchmark run");
 
@@ -169,28 +159,43 @@ internal class JobRunner
             return exitCode;
         }
 
-        exitCode = await StartContainer(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to start container");
-            return exitCode;
-        }
-
-        exitCode = await StreamContainerLogs(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to stream container logs");
-            return exitCode;
-        }
-
-        exitCode = await RemoveContainer(jobId, projectDir, container);
-        if (exitCode != 0)
-        {
-            this.logger.LogInformation("Failed to remove container");
-            return exitCode;
-        }
-
+        exitCode = await RunContainer(jobId, projectDir, container, cancellationToken);
         return exitCode;
+    }
+
+    private async Task<int> RunContainer(string jobId, string projectDir, string container, CancellationToken cancellationToken)
+    {
+        int exitCode = await StartContainer(jobId, projectDir, container);
+        bool failed = false;
+        if (exitCode != 0)
+        {
+            this.logger.LogInformation("Failed to start build container");
+            failed = true;
+        }
+
+        try
+        {
+            exitCode = await StreamContainerLogs(jobId, projectDir, container, cancellationToken);
+            if (exitCode != 0)
+            {
+                this.logger.LogInformation("Failed to stream build container logs");
+                failed = true;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            this.logger.LogInformation("Job timed out and cancelled.");
+            await BroadcastLogMessage(new LogMessage("log", job.Id, "stderr", "The job exceeded the maximum allowed execution time."));
+            failed = true;
+        }
+
+        int cleanupExitCode = await RemoveContainer(jobId, projectDir, container);
+        if (cleanupExitCode != 0)
+        {
+            this.logger.LogInformation("Failed to remove build container");
+        }
+
+        return failed ? -1 : 0;
     }
 
     private async Task<(int exitCode, string container)> CreateBuildContainer(string jobId, string projectDir)
@@ -230,13 +235,19 @@ internal class JobRunner
         );
     }
 
-    private Task<int> StreamContainerLogs(string jobId, string projectDir, string containerName)
+    private Task<int> StreamContainerLogs(
+        string jobId,
+        string projectDir,
+        string containerName,
+        CancellationToken cancellationToken
+    )
     {
         return RunDockerStep(
             jobId,
             projectDir,
             $"logs --follow --details {containerName}",
-            streamLogs: true
+            streamLogs: true,
+            cancellationToken: cancellationToken
         );
     }
 
@@ -245,11 +256,17 @@ internal class JobRunner
         return RunDockerStep(
             jobId,
             projectDir,
-            $"rm {containerName}"
+            $"rm -f {containerName}"
         );
     }
 
-    private async Task<int> RunDockerStep(string jobId, string projectDir, string args, bool streamLogs = false)
+    private async Task<int> RunDockerStep(
+        string jobId,
+        string projectDir,
+        string args,
+        bool streamLogs = false,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -300,7 +317,7 @@ internal class JobRunner
             process.BeginErrorReadLine();
             process.BeginOutputReadLine();
 
-            await process.WaitForExitAsync();
+            await process.WaitForExitAsync(cancellationToken);
             int exitCode = process.ExitCode;
             return exitCode;
         }
