@@ -121,7 +121,7 @@ export function App() {
           </div>
         </div>
       </div>
-      <div className="flex flex-1" style={{height:"calc(100dvh - 50px)"}}>
+      <div className="flex flex-1 max-w-full" style={{height:"calc(100dvh - 50px)"}}>
         <div>
         {
           isShowingJobsSidebar &&
@@ -132,15 +132,15 @@ export function App() {
           )
         }
         </div>
-        <div className="flex-1 flex h-full">
-          <div className=" w-1/2 h-full">
+        <div className="flex-1 flex h-full max-w-full">
+          <div className=" w-1/2 h-full max-w-[50%]">
             <CodeEditor
               serverUrl={EDITOR_SERVICE_URL}
               code={currentJob ? currentJob.code : initialCode}
               onTextChange={handleCodeChange}
             />
           </div>
-          <div className="w-1/2 h-full border-l border-l-gray-200">
+          <div className="w-1/2 max-w-[50%] overflow-x-auto h-full border-l border-l-gray-200">
             <ResultsContainer logs={currentLogs} job={currentJob} />
           </div>
         </div>
