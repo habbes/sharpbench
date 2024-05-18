@@ -209,13 +209,13 @@ internal class JobRunner
 
     private async Task<(int exitCode, string container)> CreateContainer(string jobId, string projectDir)
     {
-        await this.BroadcastLogMessage(new LogMessage("log", jobId, "stdout", "Building project..."));
+        await this.BroadcastLogMessage(new LogMessage("log", jobId, "stdout", "Running benchmarks..."));
         var image = "habbes/sharpbench-runner";
         string container = Path.GetRandomFileName().Split('.')[0];
         int exitCode = await RunDockerStep(
             jobId,
             projectDir,
-            $"create --network none -v {projectDir}:/src --name {container} {image}"
+            $"create --network none --memory 1G -v {projectDir}:/src --name {container} {image}"
         );
 
         return (exitCode, container);
