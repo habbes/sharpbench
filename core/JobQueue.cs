@@ -83,6 +83,7 @@ internal class JobQueue : IJobQueue
             return RedisHelpers.JobKeyToId(result!);
         }
         catch (RedisTimeoutException) {
+            // TODO: log this for reporting
             return null;
         }
     }
