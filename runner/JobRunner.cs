@@ -62,8 +62,14 @@ internal class JobRunner
         this.logger.LogInformation($"Running job {job.Id}");
 
 
-        int exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
-        this.logger.LogInformation("Execution complete");
+        int exitCode = await BuildBenchmarkProject(job.Id, tempProjectDir);
+        this.logger.LogInformation("Build complete");
+        if (exitCode == 0)
+        {
+            exitCode = await ExecuteBenchmarkProject(job.Id, tempProjectDir);
+            this.logger.LogInformation("Execution complete");
+        }
+
         if (exitCode != 0)
         {
             // report error
@@ -117,10 +123,45 @@ internal class JobRunner
         }
     }
 
+    private async Task<int> BuildBenchmarkProject(string jobId, string projectDir)
+    {
+        this.logger.LogInformation("Restoring benchmark project...");
+        
+        (int exitCode, string container) = await CreateBuildContainer(jobId, projectDir);
+        if (exitCode != 0)
+        {
+            this.logger.LogInformation("Create build container failed");
+            return exitCode;
+        }
+
+        exitCode = await StartContainer(jobId, projectDir, container);
+        if (exitCode != 0)
+        {
+            this.logger.LogInformation("Failed to start build container");
+            return exitCode;
+        }
+
+        exitCode = await StreamContainerLogs(jobId, projectDir, container);
+        if (exitCode != 0)
+        {
+            this.logger.LogInformation("Failed to stream build container logs");
+            return exitCode;
+        }
+
+        exitCode = await RemoveContainer(jobId, projectDir, container);
+        if (exitCode != 0)
+        {
+            this.logger.LogInformation("Failed to remove build container");
+            return exitCode;
+        }
+
+        return exitCode;
+    }
+
     private async Task<int> ExecuteBenchmarkProject(string jobId, string projectDir)
     {
         this.logger.LogInformation("Starting benchmark run");
-        this.logger.LogInformation("Restoring project...");
+
         (int exitCode, string container) = await CreateContainer(jobId, projectDir);
         if (exitCode != 0)
         {
@@ -152,6 +193,20 @@ internal class JobRunner
         return exitCode;
     }
 
+    private async Task<(int exitCode, string container)> CreateBuildContainer(string jobId, string projectDir)
+    {
+        await this.BroadcastLogMessage(new LogMessage("log", jobId, "stdout", "Building project..."));
+        var image = "habbes/sharpbench-runner:1.0";
+        string container = Path.GetRandomFileName().Split('.')[0];
+        int exitCode = await RunDockerStep(
+            jobId,
+            projectDir,
+            $"create -v {projectDir}:/src --name {container} {image} build -c Release"
+        );
+
+        return (exitCode, container);
+    }
+
     private async Task<(int exitCode, string container)> CreateContainer(string jobId, string projectDir)
     {
         await this.BroadcastLogMessage(new LogMessage("log", jobId, "stdout", "Building project..."));
@@ -160,7 +215,7 @@ internal class JobRunner
         int exitCode = await RunDockerStep(
             jobId,
             projectDir,
-            $"create -v {projectDir}:/src --name {container} {image}"
+            $"create --network none -v {projectDir}:/src --name {container} {image}"
         );
 
         return (exitCode, container);
