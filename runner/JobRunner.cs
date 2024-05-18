@@ -201,7 +201,7 @@ internal class JobRunner
         int exitCode = await RunDockerStep(
             jobId,
             projectDir,
-            $"create -v {projectDir}:/src --name {container} {image} build -c Release"
+            $"create --memory 1GB -v {projectDir}:/src --name {container} {image} build -c Release"
         );
 
         return (exitCode, container);
