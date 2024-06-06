@@ -38,6 +38,8 @@ Here's a summary of problems with the current setup:
   - Update runners to the latest version of sharpbench (automatically)
   - Install OS updates without having to manually ssh into servers
 - Resilience
+  - No lost jobs or indefinitely indeterminate job status. Eventually, each job should either be reported as failed or successful.
+  - Should commit to a consistent job status reporting to the user. Don't report a successful job as failed or vice-versa
   - TODO
 
 ## Architecture and implementation
@@ -66,6 +68,8 @@ Here are my initial thoughts.
 - Create a service that will keep track of all VM state. Let's refer to it as WorkerManager
 - Each runner sends a signal to the worker manager when it's state changes:
   - before it starts executing a job
+    - think about whether it should be or after it has pulled the job from the queue
+    - read about redis reliable queues
   - after it finishes executing a job
 - WorkerManager uses state signals from runners to keep track of the current state of each runner
 - For the sake of resilience, runner should require an acknowledgement from WorkerManager before commit to the new state (i.e. should wait for ack before exeuting the job or going back to the idle loop)
@@ -75,6 +79,34 @@ Here are my initial thoughts.
      - If the runner fails to process an acknowledgement after N tries, it should not proceed. It should intentionall enter an unhealthy state and wait for the system to recover (TODO: think about what this actually looks like)
 - Each runner sends a heartbeat periodically to the WorkerManager
   - If a WorkerManager doesn't receive a heartbeat from a given runner after a given threshold, it could consider the VM down (or unhealthy)
+
+**Deciding when to start/stop machines**:
+
+The WorkerManager now knows the current state of all runners.
+
+When should it shut down a machine? When the following conditions are all met:
+- the runner has been idle for the past N minutes.
+- there are no jobs in the queue.
+  - How does it know when the queue is empty?
+    - If redis has a way to check the queue length (or whether queue has items), consider using that
+    - If all runners are idle, it could be an indication that there are no items in the queue
+    - We can keep track of some shared counters when jobs are queued and dequeued
+    - Consider race conditions: the queue might be empty at when you check item, but might have items by the time you act on the fact that it's empty
+
+If there are multiple runners which have been idle for longer than the threshold (N minutes) and the queue is empty, should we turn all of them off? Probably not. To reduce the potential for cold starts (more on this later), we can decide to only shut down at most one machine in a given N-minute window.
+
+When should we turn on a machine? When the following conditions are all met:
+- the runner is off
+- all other runners are either off or busy
+- there's a job in the queue
+  - How do we tell whether there's a job in the queue?
+    - If redis has away to check whether the queue is non-empty
+    - If there's at least one runner which is on and all active runners are busy
+    - We can keep track of some shared counters when jobs are queued and dequeued
+    - Consider race conditions
+
+
+
 
 
 
