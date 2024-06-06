@@ -30,13 +30,53 @@ Here's a summary of problems with the current setup:
   - Track regions where jobs come from?
 - Cost management:
   - Automatically shut down runners when idle and starting them when job available
+- Run multiple jobs (from different users) concurrently. The actual number will depend on budget. Ideally we'd want to maximize the number of concurrent jobs we can run for a given budget without considerably impacting reliability of benchmark results.
 - Ease of operation:
   - Relatively easy to add and remove vms to the pool
   - Keep track of capabilities of each VM (OS, arch, supported .NET version)
   - Remotely restart failed servers, or even re-install software
   - Update runners to the latest version of sharpbench (automatically)
   - Install OS updates without having to manually ssh into servers
+- Resilience
+  - TODO
 
-  
+## Architecture and implementation
+
+To think about implementation, let me relax the requirements, start simple and build up from there.
+
+### Level 1: Cost-effective concurrent jobs
+
+For a start, I can settle with supporting concurrent jobs without breaking the bank (i.e. the free $150 monthly Azure Credits I get from my company). At this level I don't care about flexibility: it's okay if only one OS, .NET version, architecture etc. are supported. At this level I also don't want to worry about ops. If I limit myself to a handful of VMs, I can still manage them by the occasional ssh, and Azure portal.
+
+Assuming I'll only run nore more than one benchmark in a VM at a time, the solution here is to have multiple VMs. Each VM will have the sharpbench runner installed and will listen to the same queue. This way the server doesn't change. It will keep sending jobs to the same queue. Any idle runner can dequeue the next available job from the queue.
+
+To keep the costs manageable, I should shut down VMs when they're idle and there are no jobs available. When jobs are available, I should turn some of the VMs back on. Turning a VM on when a job arrives lead to a cold-start issues where the first job(s) that arrive when all machines are off will stay in the queue for longer. If jobs are sparse, then most jobs will experience cold-start and that will negatively affect the overall user experience and perception of the service. I'll look into the cold-start problem later.
+
+I'll need a system that:
+- knows about all the available runner VMS
+- can tell when VMs are idle and when they're busy
+- can turn off VMs
+- can boot VMs
+- can effectively decide when to turn off/on a particular VM
+
+Here are my initial thoughts.
+
+**Tracking VM state**:
+
+- Create a service that will keep track of all VM state. Let's refer to it as WorkerManager
+- Each runner sends a signal to the worker manager when it's state changes:
+  - before it starts executing a job
+  - after it finishes executing a job
+- WorkerManager uses state signals from runners to keep track of the current state of each runner
+- For the sake of resilience, runner should require an acknowledgement from WorkerManager before commit to the new state (i.e. should wait for ack before exeuting the job or going back to the idle loop)
+  - this adds a delay to starting jobs (which should be minimal in healthy cases), but it helps ensure that the WorkerManager has a consistent view of the runner's current state. If the message does not get delivered to the WorkerManager, it might assume the runner is idle when it's executing a job and shut it down in the middle of a job, or it might assume it's busy when it's idle and keep it on indefinitely, increasing costs.
+  - it's possible that the state change signal was delivered to the WorkerManager, but the acknowledgement fails to reach or get processed by the runner. In this case, the WorkerManager knows that the runner is busy (or idle) but the runner is not aware that the WorkerManager knows. How do we solve this?
+     - The runner could retry sending the message N times until it processes the acknowledgement. This means the WorkerManager receiving the same state message should be idempotent.
+     - If the runner fails to process an acknowledgement after N tries, it should not proceed. It should intentionall enter an unhealthy state and wait for the system to recover (TODO: think about what this actually looks like)
+- Each runner sends a heartbeat periodically to the WorkerManager
+  - If a WorkerManager doesn't receive a heartbeat from a given runner after a given threshold, it could consider the VM down (or unhealthy)
+
+
+
 
 
