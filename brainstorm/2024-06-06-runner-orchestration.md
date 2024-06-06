@@ -14,3 +14,29 @@ Here's a summary of problems with the current setup:
   - I can only run benchmarks on the architecture supported by this VM (x86)
   - I can only run benchmarks on a specific version of .NET 8.
 
+## Orchestration goals
+
+- Flexibility:
+  - Allow user to choose target .NET version
+  - Allow user to choose target architecture (x86, arm)
+  - Allow user to choose target OS (at least Windows and Linux)
+  - Manage pool of runners and queue job to the runner that meets the requirements
+- Observability:
+  - Find out real-time state of machines (running a job, idle, offline, version of benchmark runner, etc.)
+  - Find out when runners have crash and why
+  - Be able to recover automatically from failed machines
+  - Be able to tell how many jobs are queued, how many are running at any given point in time
+  - Track failure rate, find patterns in of failed jobs
+  - Track regions where jobs come from?
+- Cost management:
+  - Automatically shut down runners when idle and starting them when job available
+- Ease of operation:
+  - Relatively easy to add and remove vms to the pool
+  - Keep track of capabilities of each VM (OS, arch, supported .NET version)
+  - Remotely restart failed servers, or even re-install software
+  - Update runners to the latest version of sharpbench (automatically)
+  - Install OS updates without having to manually ssh into servers
+
+  
+
+
