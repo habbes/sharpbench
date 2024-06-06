@@ -105,7 +105,9 @@ When should we turn on a machine? When the following conditions are all met:
     - We can keep track of some shared counters when jobs are queued and dequeued
     - Consider race conditions
 
+**Starting and stopping machines**:
 
+I believe we should be able to use Azure APIs or SDKs to start/stop a VM. So we'll need to keep track of the VM resource ID and all relevant information that will allow us to make the API requests.
 
 
 
