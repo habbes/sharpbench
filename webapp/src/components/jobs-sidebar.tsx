@@ -1,4 +1,4 @@
-import { Job } from "@/types";
+import { Job } from "@/core/types";
 import { DotFilledIcon, ClockIcon, Cross2Icon, CheckCircledIcon } from "@radix-ui/react-icons";
 
 

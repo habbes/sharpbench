@@ -1,7 +1,7 @@
 import { LogsContainer } from "@/components/logs-container";
 import { useState } from 'react';
 import { ReportContainer } from "@/components/report-container";
-import { Job, LogMessage } from "@/types";
+import { Job, LogMessage } from "@/core/types";
 
 interface ResultsContainerProps {
   logs: LogMessage[];

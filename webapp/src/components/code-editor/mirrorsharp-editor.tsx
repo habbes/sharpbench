@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import "mirrorsharp-codemirror-6-preview/mirrorsharp.css";
 import mirrorsharp, { MirrorSharpInstance } from 'mirrorsharp-codemirror-6-preview';
 import { CodeEditorProps } from "./types";
-import { logger } from '@/logger';
+import { logger } from '@/core/logger';
 
 const LANGUAGE = 'C#';
 
