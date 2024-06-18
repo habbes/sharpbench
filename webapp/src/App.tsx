@@ -7,10 +7,10 @@ import { ResultsContainer } from "@/components/results-container";
 import { JobsSidebar } from "@/components/jobs-sidebar";
 import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons";
 import { INITIAL_CODE } from "./initial-code";
-import { Job, LogMessage, RealtimeMessage } from './types';
+import { Job, LogMessage, RealtimeMessage } from './core/types';
 import useWebSocket from 'react-use-websocket';
 import { EncodeArgs, deserializeSession, serializeSession } from './lib';
-import { logger } from './logger';
+import { logger } from './core/logger';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
