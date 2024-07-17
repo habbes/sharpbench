@@ -20,6 +20,7 @@ const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 
 export function App() {
+  const [socketUrl, setSocketUrl] = useState<string|null>(null);
   const [session, setSession] = useState<Session>();
   const [initialCode] = useState(() => {
     const decoded = decodeUrlSession();
@@ -31,7 +32,7 @@ export function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [currentJobId, setCurrentJobId] = useState<string>();
-  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(JOB_UPDATES_URL, {
+  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(socketUrl, {
     retryOnError: true,
     shouldReconnect: () => true
   });
@@ -74,6 +75,7 @@ export function App() {
 
   useEffect(() => {
     if (session) {
+      setSocketUrl(`${JOB_UPDATES_URL}?sessionId=${session.id}`);
       return;
     }
 

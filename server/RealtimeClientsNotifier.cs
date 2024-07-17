@@ -14,11 +14,11 @@ public class RealtimeClientsNotifier
         this.logger = logger;
     }
 
-    public Task RealTimeSyncWithClient(WebSocket client)
+    public Task RealTimeSyncWithClient(WebSocket client, string clientId)
     {
         logger.LogInformation("Realtime communication established with new client");
         var tcs = new TaskCompletionSource();
-        realTimeClients.TryAdd(client, new ClientEntry(client, tcs));
+        realTimeClients.TryAdd(client, new ClientEntry(clientId, client, tcs));
         // the task will be complete when we detect that the connection is closed
         // or all communication has ended.
         // This prevents the caller from terminating prematurely and abruptly closing the connection
@@ -79,4 +79,4 @@ public class RealtimeClientsNotifier
     }
 }
 
-record ClientEntry(WebSocket Socket, TaskCompletionSource TaskHandler);
+record ClientEntry(string ClientId, WebSocket Socket, TaskCompletionSource TaskHandler);
