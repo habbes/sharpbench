@@ -34,7 +34,16 @@ export class Session {
     }
 
     public createEvent(event: SessionEvent) {
-        
+        switch (event.type) {
+            case 'createJob':
+                this.jobs.saveJob(event.job);
+                return;
+            case 'updateJob':
+                this.jobs.saveJob(event.job);
+                return;
+            case 'createLog':
+                // TODO: save logs
+        }
     }
 
     
@@ -68,6 +77,6 @@ export interface UpdateJobEvent {
 }
 
 export interface CreateLogEvent {
-    type: 'CreateLog';
+    type: 'createLog';
     message: LogMessage;
 }

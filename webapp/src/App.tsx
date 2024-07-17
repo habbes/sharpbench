@@ -11,6 +11,7 @@ import { Job, LogMessage, RealtimeMessage } from './core/types';
 import useWebSocket from 'react-use-websocket';
 import { EncodeArgs, deserializeSession, serializeSession } from './lib';
 import { logger } from './core/logger';
+import { Session } from './core/session';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -19,6 +20,7 @@ const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 
 export function App() {
+  const [session, setSession] = useState<Session>();
   const [initialCode] = useState(() => {
     const decoded = decodeUrlSession();
     logger.log('initial code', decoded);
@@ -70,9 +72,23 @@ export function App() {
     }
   }, [lastJsonMessage]);
 
+  useEffect(() => {
+    if (session) {
+      return;
+    }
+
+    Session.loadSession().then(s => {
+      setSession(s);
+    }).catch(e => {
+      alert(`Failed to load session ${e.message}`);
+    });
+  }, [session]);
+
   async function handleRun() {
     if (!code) return;
-    const job = await submitCodeRun(code);
+    if (!session) return;
+    const job = await submitCodeRun(code, session.id);
+    session.jobs.saveJob(job);
     setJobs([job, ...jobs]);
     setIsShowingJobsSidebar(true);
     setCurrentJobId(job.id);
@@ -149,7 +165,7 @@ export function App() {
   )
 }
 
-async function submitCodeRun(code: string): Promise<Job> {
+async function submitCodeRun(code: string, sessionId: string): Promise<Job> {
   logger.log('submitting code run', code);
   const resp = await fetch(`${API_URL}/run`, {
     method: 'POST',
@@ -157,7 +173,8 @@ async function submitCodeRun(code: string): Promise<Job> {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      code: code
+      code: code,
+      clientId: sessionId
     }),
     mode: 'cors'
   });

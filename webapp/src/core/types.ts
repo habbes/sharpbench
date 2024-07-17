@@ -19,6 +19,7 @@ export type LogMessage = {
 
 export type Job = {
   id: string,
+  clientId: string,
   code: string,
   status: JobStatus,
   exitCode?: number,

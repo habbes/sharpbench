@@ -61,4 +61,4 @@ app.Use(async (context, next) =>
 
 app.Run();
 
-record RunArgs(string Code);
+record RunArgs(string Code, string ClientId);
