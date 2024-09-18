@@ -30,7 +30,7 @@ export class Session {
 
     public get jobs() {
         if (!this._jobs) {
-            this._jobs = new JobsRepository(this._db, this.logger);
+            this._jobs = new JobsRepository(this._db);
         }
 
         return this._jobs;

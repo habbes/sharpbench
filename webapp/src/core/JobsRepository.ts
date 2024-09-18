@@ -1,11 +1,10 @@
 import { Job, LogMessage  } from "./types";
 import { SharpbenchDb } from "./database";
-import { Logger } from "./logger";
 import { nanoid } from "nanoid";
 
 
 export class JobsRepository {
-    constructor(private db: SharpbenchDb, private logger?: Logger) {
+    constructor(private db: SharpbenchDb) {
     }
 
     async getJobs(): Promise<Job[]> {
