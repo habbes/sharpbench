@@ -67,7 +67,7 @@ public class RealtimeClientsNotifier
     {
         if (!realTimeClients.TryGetValue(clientId, out var clientEntry))
         {
-            logger.LogInformation($"Attempted to send message to client {clientId}, but it was not found.");
+            logger.LogWarning($"Attempted to send message to client {clientId}, but it was not found.");
             return false;
         }
 

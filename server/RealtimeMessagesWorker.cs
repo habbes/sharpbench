@@ -46,7 +46,7 @@ internal class RealtimeMessagesWorker : BackgroundService
                         return;
                     }
 
-                    await clientsNotifier.SendMessageToClient(job.Id, message);
+                    await clientsNotifier.SendMessageToClient(job.ClientId, message);
                 } catch (ResourceNotFoundException)
                 {
                     logger.LogWarning($"Attempting to send job message but job {message.JobId} was not found.");
