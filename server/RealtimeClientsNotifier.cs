@@ -6,6 +6,10 @@ using Sharpbench.Core;
 
 namespace SharpbenchApi;
 
+/// <summary>
+/// Manages real-time messaging to clients connected via WebSocket.
+/// TODO: consider using SignalR instead.
+/// </summary>
 public class RealtimeClientsNotifier
 {
     ConcurrentDictionary<string, RealTimeClient> realTimeClients = new();

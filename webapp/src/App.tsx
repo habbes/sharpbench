@@ -46,7 +46,7 @@ export function App() {
   const currentJob = jobs.find(j => j.id === currentJobId);
 
   useEffect(() => {
-    if (!lastJsonMessage) return;
+    if (!lastJsonMessage || !session) return;
     logger.log('received message', lastJsonMessage);
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
@@ -58,8 +58,9 @@ export function App() {
         completedAt: new Date().toString()
       });
       
-      if (!result.success) return;
+      if (!result.updatedJob) return;
       setJobs(result.jobs);
+      session.createEvent({ type: 'updateJob', job: result.updatedJob });
     } else {
       setLogs(logs => [...logs, lastJsonMessage]);
       // TODO: the update should be done from the API
@@ -69,10 +70,11 @@ export function App() {
       const job = jobs[jobIndex];
       if (job.status !== 'Queued') return;
       const result = updateJob(jobs, jobIndex, { status: 'Progress', startedAt: new Date().toString() });
-      if (!result.success) return;
+      if (!result.updatedJob) return;
       setJobs(result.jobs);
+      session.createEvent({ type: 'updateJob', job: result.updatedJob });
     }
-  }, [lastJsonMessage, jobs]);
+  }, [lastJsonMessage, jobs, session]);
 
   useEffect(() => {
     Session.loadSession().then(s => {
@@ -98,7 +100,7 @@ export function App() {
     if (!code) return;
     if (!session) return;
     const job = await submitCodeRun(code, session.id);
-    session.jobs.saveJob(job);
+    session.createEvent({ type: 'createJob', job: job });
     setJobs([job, ...jobs]);
     setIsShowingJobsSidebar(true);
     setCurrentJobId(job.id);
@@ -205,7 +207,7 @@ function updateJob(jobs: Job[], index: number, update: Partial<Job>) {
   const updated = { ...job, ...update };
   const updatedJobs = [...jobs];
   updatedJobs[index] = updated;
-  return { success: true, jobs: updatedJobs }
+  return { success: true, jobs: updatedJobs, updatedJob: updated }
 }
 
 function decodeUrlSession() {
