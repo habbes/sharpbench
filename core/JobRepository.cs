@@ -1,4 +1,6 @@
 namespace Sharpbench.Core;
+
+using SharpbenchCore;
 using StackExchange.Redis;
 
 internal class JobRepository : IJobRepository
@@ -25,6 +27,11 @@ internal class JobRepository : IJobRepository
     public async Task<Job> GetJob(string id)
     {
         var hash = await this.db.HashGetAllAsync(RedisHelpers.GetJobKey(id));
+        if (hash == null || hash.Length == 0)
+        {
+            throw new ResourceNotFoundException($"Job {id} was not found.");
+        }
+
         var job = this.RedisHashToJob(id, hash);
         return job;
     }
