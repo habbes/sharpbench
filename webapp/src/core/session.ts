@@ -11,9 +11,12 @@ export class Session {
     }
 
     public static async loadSession(logger?: Logger): Promise<Session> {
+        logger?.log("loading db...");
         const db = await loadDatabase();
+        logger?.log("loaded db", db);
         const id = await this.getOrCreateSessionId(db);
         const session = new Session(db, id, logger);
+        console.log('loaded session', id, session);
         return session;
     }
 
@@ -48,8 +51,8 @@ export class Session {
     }
 
     
-    public delete(): Promise<void> {
-        throw new Error("Not Implemented");
+    public async clear(): Promise<void> {
+        await Promise.all([this._db.clear("jobs"), this._db.clear("logs")]);
     }
 
     private static async getOrCreateSessionId(db: SharpbenchDb) {

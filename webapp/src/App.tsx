@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { PlayIcon } from '@radix-ui/react-icons';
+import { PlayIcon, TrashIcon } from '@radix-ui/react-icons';
 import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
@@ -79,9 +79,10 @@ export function App() {
   }, [lastJsonMessage, jobs, session]);
 
   useEffect(() => {
-    Session.loadSession().then(s => {
+    console.log('loading the session...');
+    Session.loadSession(logger).then(s => {
       setSession(s);
-    });
+    }).catch(e => logger.log('error loading session', e));
   }, []);
 
   useEffect(() => {
@@ -118,6 +119,15 @@ export function App() {
     setCode(newCode);
   }, [setCode]);
 
+  async function handleClearHistory() {
+    setJobs([]);
+    setLogs([]);
+    setCurrentJobId(undefined);
+    if (session) {
+      await session.clear();
+    }
+  }
+
   return (
     <main className="h-screen bg-red flex flex-col">
       <div className="h-[50px] pr-2 flex items-center border-b border-b-gray-200 shadow-sm justify-between">
@@ -133,10 +143,16 @@ export function App() {
             ) :
             (
               <div onClick={toggleShowJobsSidebar}
-                className="flex w-[300px] h-full px-4 items-center border-r border-r-gray-200 justify-between mr-4"
+                className="flex w-[300px] h-full gap-4 px-4 items-center border-r border-r-gray-200 justify-between mr-4"
               >
-                <div className="text-sm font-semibold">
-                  Jobs History
+                <div className="flex w-full items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">
+                    Jobs History
+                    
+                  </div>
+                  <div onClick={handleClearHistory} title="Clear history" className="cursor-pointer">
+                    <TrashIcon />
+                  </div>
                 </div>
                 <div className="cursor-pointer" title="Hide job history">
                   <DoubleArrowLeftIcon />
