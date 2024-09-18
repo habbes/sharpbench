@@ -48,6 +48,7 @@ export function App() {
   useEffect(() => {
     if (!lastJsonMessage || !session) return;
     logger.log('received message', lastJsonMessage);
+  
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
@@ -62,6 +63,7 @@ export function App() {
       setJobs(result.jobs);
       session.createEvent({ type: 'updateJob', job: result.updatedJob });
     } else {
+      session.createEvent({ type: 'createLog', message: lastJsonMessage });
       setLogs(logs => [...logs, lastJsonMessage]);
       // TODO: the update should be done from the API
       // set the job to running if this is the first log message
@@ -94,6 +96,7 @@ export function App() {
     setHasLoadedSavedJobs(true);
 
     session.jobs.getJobs().then(loadedJobs => setJobs(currentJobs => [...currentJobs, ...loadedJobs]));
+    session.jobs.getLogs().then(loadedLogs => setLogs(currentLogs => [...currentLogs, ...loadedLogs]));
   }, [session, hasLoadedSavedJobs]);
 
   async function handleRun() {

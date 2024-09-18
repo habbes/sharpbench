@@ -17,6 +17,14 @@ export type LogMessage = {
   Message: string;
 }
 
+export type StoredLogMessage = {
+  jobId: string;
+  logSource: "stdout" | "stderr";
+  message: string;
+  id: string;
+  timestamp: number;
+}
+
 export type Job = {
   id: string,
   clientId: string,

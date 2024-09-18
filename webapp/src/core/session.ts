@@ -42,7 +42,8 @@ export class Session {
                 this.jobs.saveJob(event.job);
                 return;
             case 'createLog':
-                // TODO: save logs
+                this.jobs.saveLog(event.message);
+                return;
         }
     }
 
