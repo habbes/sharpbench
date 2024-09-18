@@ -22,10 +22,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.StackExchange.Redis" Version="8.2.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\core\SharpbenchCore.csproj" />
+    <ProjectReference Include="..\sharpbench.ServiceDefaults\sharpbench.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

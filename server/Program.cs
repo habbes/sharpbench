@@ -4,12 +4,16 @@ using Sharpbench.Core;
 using SharpbenchApi;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+builder.AddRedisClient("sharpbench-cache");
 builder.Services.AddCors();
 builder.Services.AddSharpbench();
 builder.Services.AddSingleton<RealtimeClientsNotifier>();
 builder.Services.AddHostedService<RealtimeMessagesWorker>();
-
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 // See: https://github.com/ashmind/mirrorsharp
 app.UseWebSockets();
