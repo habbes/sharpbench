@@ -1,4 +1,6 @@
 namespace Sharpbench.Core;
+
+using SharpbenchCore;
 using StackExchange.Redis;
 
 internal class JobRepository : IJobRepository
@@ -10,10 +12,10 @@ internal class JobRepository : IJobRepository
         this.db = redisDb;
         this.jobsQueue = jobsQueue;
     }
-    public async Task<Job> SubmitJob(string code)
+    public async Task<Job> SubmitJob(string code, string clientId)
     {
         string id = Guid.NewGuid().ToString();
-        var newJob = new Job(id, code, JobStatus.Queued);
+        var newJob = new Job(id, code, clientId, JobStatus.Queued);
         var jobHash = this.JobToRedisHash(newJob);
 
         string jobKey = RedisHelpers.GetJobKey(id);
@@ -25,6 +27,11 @@ internal class JobRepository : IJobRepository
     public async Task<Job> GetJob(string id)
     {
         var hash = await this.db.HashGetAllAsync(RedisHelpers.GetJobKey(id));
+        if (hash == null || hash.Length == 0)
+        {
+            throw new ResourceNotFoundException($"Job {id} was not found.");
+        }
+
         var job = this.RedisHashToJob(id, hash);
         return job;
     }
@@ -73,6 +80,7 @@ internal class JobRepository : IJobRepository
         {
             new HashEntry("Id", job.Id),
             new HashEntry("Code", job.Code),
+            new HashEntry("ClientId", job.ClientId ?? ""),
             new HashEntry("Status", job.Status.ToString()),
         };
 
@@ -98,6 +106,11 @@ internal class JobRepository : IJobRepository
             if (entry.Name == "Code")
             {
                 job.Code = (string)entry.Value!;
+            }
+
+            if (entry.Name == "ClientId")
+            {
+                job.ClientId = (string?)entry.Value;
             }
 
             if (entry.Name == "Status")

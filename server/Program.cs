@@ -23,7 +23,7 @@ app.MapMirrorSharp("/mirrorsharp");
 
 app.MapPost("/run", async ([FromServices] IJobRepository jobs, RunArgs args) =>
 {
-    var job = await jobs.SubmitJob(args.Code);
+    var job = await jobs.SubmitJob(args.Code, args.ClientId);
     return job;
 });
 
@@ -46,7 +46,12 @@ app.Use(async (context, next) =>
         {
             var clientsNotifier = context.RequestServices.GetRequiredService<RealtimeClientsNotifier>();
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await clientsNotifier.RealTimeSyncWithClient(webSocket);
+            var clientId = context.Request.Query["sessionId"].FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(clientId))
+            {
+                await clientsNotifier.RealTimeSyncWithClient(webSocket, clientId);
+            }
         }
         else
         {
@@ -61,4 +66,4 @@ app.Use(async (context, next) =>
 
 app.Run();
 
-record RunArgs(string Code);
+record RunArgs(string Code, string ClientId);

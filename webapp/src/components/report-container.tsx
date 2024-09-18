@@ -1,4 +1,4 @@
-import { Job } from '@/types';
+import { Job } from '@/core/types';
 import Markdown from "react-markdown";
 import remarkGfm from 'remark-gfm'
 

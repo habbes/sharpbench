@@ -2,7 +2,7 @@ namespace Sharpbench.Core;
 
 public interface IJobRepository
 {
-    Task<Job> SubmitJob(string code);
+    Task<Job> SubmitJob(string code, string clientId);
     Task<Job> GetJob(string Id);
     Task<Job> ReportJobStarted(string jobId);
     Task<Job> ReportJobSuccess(string jobId, string markdownResult);

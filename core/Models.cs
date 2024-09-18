@@ -15,13 +15,14 @@ public enum JobStatus
 
 public class Job
 {
-    public Job(string id, string code): this(id, code, JobStatus.Queued)
+    public Job(string id, string code, string clientId): this(id, code, clientId, JobStatus.Queued)
     {
     }
 
-    public Job(string id, string code, JobStatus status)
+    public Job(string id, string code, string clientId, JobStatus status)
     {
         this.Id = id;
+        this.ClientId = clientId;
         this.Code = code;
         this.Status = status;
     }
@@ -29,6 +30,8 @@ public class Job
     public Job(string id) { this.Id = id; }
 
     public string Id { get; private set; }
+
+    public string? ClientId { get; set; }
     public string Code { get; set; }
     public JobStatus Status { get; set; }
     public string? MarkdownReport { get; set; }

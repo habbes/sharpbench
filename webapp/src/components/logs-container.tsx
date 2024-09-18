@@ -1,4 +1,4 @@
-import { LogMessage } from '@/types';
+import { LogMessage } from '@/core/types';
 
 export function LogsContainer({ logs } : { logs: LogMessage[] }) {
   return (

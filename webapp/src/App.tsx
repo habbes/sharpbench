@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { PlayIcon } from '@radix-ui/react-icons';
+import { PlayIcon, TrashIcon } from '@radix-ui/react-icons';
 import './App.css'
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/code-editor";
@@ -7,10 +7,11 @@ import { ResultsContainer } from "@/components/results-container";
 import { JobsSidebar } from "@/components/jobs-sidebar";
 import { DoubleArrowRightIcon, DoubleArrowLeftIcon } from "@radix-ui/react-icons";
 import { INITIAL_CODE } from "./initial-code";
-import { Job, LogMessage, RealtimeMessage } from './types';
+import { Job, LogMessage, RealtimeMessage } from './core/types';
 import useWebSocket from 'react-use-websocket';
 import { EncodeArgs, deserializeSession, serializeSession } from './lib';
-import { logger } from './logger';
+import { logger } from './core/logger';
+import { Session } from './core/session';
 
 // TODO this should be configure using env vars
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5176";
@@ -19,6 +20,8 @@ const EDITOR_SERVICE_URL = `${WS_URL}/mirrorsharp`;
 const JOB_UPDATES_URL = `${WS_URL}/jobs-ws`;
 
 export function App() {
+  const [socketUrl, setSocketUrl] = useState<string|null>(null);
+  const [session, setSession] = useState<Session>();
   const [initialCode] = useState(() => {
     const decoded = decodeUrlSession();
     logger.log('initial code', decoded);
@@ -26,10 +29,11 @@ export function App() {
   });
   const [code, setCode] = useState(initialCode);
   const [isShowingJobsSidebar, setIsShowingJobsSidebar] = useState(false);
+  const [hasLoadedSavedJobs, setHasLoadedSavedJobs] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [currentJobId, setCurrentJobId] = useState<string>();
-  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(JOB_UPDATES_URL, {
+  const { lastJsonMessage } = useWebSocket<RealtimeMessage>(socketUrl, {
     retryOnError: true,
     shouldReconnect: () => true
   });
@@ -42,8 +46,9 @@ export function App() {
   const currentJob = jobs.find(j => j.id === currentJobId);
 
   useEffect(() => {
-    if (!lastJsonMessage) return;
+    if (!lastJsonMessage || !session) return;
     logger.log('received message', lastJsonMessage);
+  
     if (lastJsonMessage.Type === 'jobComplete') {
       // TODO: update job from API instead
       const jobIndex = jobs.findIndex(j => j.id === lastJsonMessage.JobId);
@@ -54,9 +59,11 @@ export function App() {
         completedAt: new Date().toString()
       });
       
-      if (!result.success) return;
+      if (!result.updatedJob) return;
       setJobs(result.jobs);
+      session.createEvent({ type: 'updateJob', job: result.updatedJob });
     } else {
+      session.createEvent({ type: 'createLog', message: lastJsonMessage });
       setLogs(logs => [...logs, lastJsonMessage]);
       // TODO: the update should be done from the API
       // set the job to running if this is the first log message
@@ -65,14 +72,39 @@ export function App() {
       const job = jobs[jobIndex];
       if (job.status !== 'Queued') return;
       const result = updateJob(jobs, jobIndex, { status: 'Progress', startedAt: new Date().toString() });
-      if (!result.success) return;
+      if (!result.updatedJob) return;
       setJobs(result.jobs);
+      session.createEvent({ type: 'updateJob', job: result.updatedJob });
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, jobs, session]);
+
+  useEffect(() => {
+    console.log('loading the session...');
+    Session.loadSession(logger).then(s => {
+      setSession(s);
+    }).catch(e => logger.log('error loading session', e));
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    setSocketUrl(`${JOB_UPDATES_URL}?sessionId=${session.id}`);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (hasLoadedSavedJobs) return;
+    setHasLoadedSavedJobs(true);
+
+    session.jobs.getJobs().then(loadedJobs => setJobs(currentJobs => [...currentJobs, ...loadedJobs]));
+    session.jobs.getLogs().then(loadedLogs => setLogs(currentLogs => [...currentLogs, ...loadedLogs]));
+  }, [session, hasLoadedSavedJobs]);
 
   async function handleRun() {
     if (!code) return;
-    const job = await submitCodeRun(code);
+    if (!session) return;
+    const job = await submitCodeRun(code, session.id);
+    session.createEvent({ type: 'createJob', job: job });
     setJobs([job, ...jobs]);
     setIsShowingJobsSidebar(true);
     setCurrentJobId(job.id);
@@ -86,6 +118,15 @@ export function App() {
     encodeSessionInUrl({ code: newCode })
     setCode(newCode);
   }, [setCode]);
+
+  async function handleClearHistory() {
+    setJobs([]);
+    setLogs([]);
+    setCurrentJobId(undefined);
+    if (session) {
+      await session.clear();
+    }
+  }
 
   return (
     <main className="h-screen bg-red flex flex-col">
@@ -102,10 +143,16 @@ export function App() {
             ) :
             (
               <div onClick={toggleShowJobsSidebar}
-                className="flex w-[300px] h-full px-4 items-center border-r border-r-gray-200 justify-between mr-4"
+                className="flex w-[300px] h-full gap-4 px-4 items-center border-r border-r-gray-200 justify-between mr-4"
               >
-                <div className="text-sm font-semibold">
-                  Jobs History
+                <div className="flex w-full items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">
+                    Jobs History
+                    
+                  </div>
+                  <div onClick={handleClearHistory} title="Clear history" className="cursor-pointer">
+                    <TrashIcon />
+                  </div>
                 </div>
                 <div className="cursor-pointer" title="Hide job history">
                   <DoubleArrowLeftIcon />
@@ -149,7 +196,7 @@ export function App() {
   )
 }
 
-async function submitCodeRun(code: string): Promise<Job> {
+async function submitCodeRun(code: string, sessionId: string): Promise<Job> {
   logger.log('submitting code run', code);
   const resp = await fetch(`${API_URL}/run`, {
     method: 'POST',
@@ -157,7 +204,8 @@ async function submitCodeRun(code: string): Promise<Job> {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      code: code
+      code: code,
+      clientId: sessionId
     }),
     mode: 'cors'
   });
@@ -178,7 +226,7 @@ function updateJob(jobs: Job[], index: number, update: Partial<Job>) {
   const updated = { ...job, ...update };
   const updatedJobs = [...jobs];
   updatedJobs[index] = updated;
-  return { success: true, jobs: updatedJobs }
+  return { success: true, jobs: updatedJobs, updatedJob: updated }
 }
 
 function decodeUrlSession() {
