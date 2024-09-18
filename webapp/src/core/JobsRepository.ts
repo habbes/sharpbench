@@ -7,8 +7,17 @@ export class JobsRepository {
     constructor(private db: SharpbenchDb, private logger?: Logger) {
     }
 
-    getJobs(): Promise<Job[]> {
-        return this.db.getAll('jobs');
+    async getJobs(): Promise<Job[]> {
+        const jobs = await this.db.getAll('jobs');
+        jobs.sort((a, b) => {
+            if (a.createdAt && b.createdAt) {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            }
+
+            return -1;
+        });
+
+        return jobs;
     }
 
     async saveJob(job: Job): Promise<void> {
