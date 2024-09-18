@@ -29,6 +29,7 @@ export function App() {
   });
   const [code, setCode] = useState(initialCode);
   const [isShowingJobsSidebar, setIsShowingJobsSidebar] = useState(false);
+  const [hasLoadedSavedJobs, setHasLoadedSavedJobs] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [currentJobId, setCurrentJobId] = useState<string>();
@@ -71,20 +72,27 @@ export function App() {
       if (!result.success) return;
       setJobs(result.jobs);
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, jobs]);
 
   useEffect(() => {
-    if (session) {
-      setSocketUrl(`${JOB_UPDATES_URL}?sessionId=${session.id}`);
-      return;
-    }
-
     Session.loadSession().then(s => {
       setSession(s);
-    }).catch(e => {
-      alert(`Failed to load session ${e.message}`);
     });
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    setSocketUrl(`${JOB_UPDATES_URL}?sessionId=${session.id}`);
   }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (hasLoadedSavedJobs) return;
+    setHasLoadedSavedJobs(true);
+
+    session.jobs.getJobs().then(loadedJobs => setJobs(currentJobs => [...currentJobs, ...loadedJobs]));
+  }, [session, hasLoadedSavedJobs]);
 
   async function handleRun() {
     if (!code) return;
