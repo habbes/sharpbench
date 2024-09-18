@@ -7,7 +7,7 @@ import { Job, LogMessage } from './types';
 export class Session {
 
     private _jobs: JobsRepository|null = null;
-    private constructor(private _db: SharpbenchDb, private _id: string, private logger?: Logger) {
+    private constructor(private _db: SharpbenchDb, private _id: string) {
     }
 
     public static async loadSession(logger?: Logger): Promise<Session> {
@@ -15,7 +15,7 @@ export class Session {
         const db = await loadDatabase();
         logger?.log("loaded db", db);
         const id = await this.getOrCreateSessionId(db);
-        const session = new Session(db, id, logger);
+        const session = new Session(db, id);
         console.log('loaded session', id, session);
         return session;
     }
