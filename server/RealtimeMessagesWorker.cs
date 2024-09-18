@@ -56,6 +56,8 @@ internal class RealtimeMessagesWorker : BackgroundService
             }
         }
 
+        logger.LogInformation("Message background worker closing all clients...");
         await clientsNotifier.CloseAllClients();
+        logger.LogInformation("Message background worker shutting down...");
     }
 }

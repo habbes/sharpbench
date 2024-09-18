@@ -16,7 +16,7 @@ public class RealtimeClientsNotifier
 
     public Task RealTimeSyncWithClient(WebSocket client, string clientId)
     {
-        logger.LogInformation("Realtime communication established with new client");
+        logger.LogInformation($"Realtime communication established with new client {clientId}");
         var tcs = new TaskCompletionSource();
         realTimeClients.TryAdd(clientId, new ClientEntry(clientId, client, tcs));
         // the task will be complete when we detect that the connection is closed
@@ -80,9 +80,9 @@ public class RealtimeClientsNotifier
             return false;
         }
 
-        logger.LogInformation("Attempt to send message to client");
+        logger.LogInformation($"Attempt to send message to client {clientId}");
         await clientEntry.Socket.SendAsync(message, WebSocketMessageType.Text, true, CancellationToken.None);
-        logger.LogInformation("Sent message to client");
+        logger.LogInformation($"Sent message to client {clientId}");
         return true;
     }
 }

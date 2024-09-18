@@ -47,6 +47,7 @@ app.Use(async (context, next) =>
             var clientsNotifier = context.RequestServices.GetRequiredService<RealtimeClientsNotifier>();
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
             var clientId = context.Request.Query["sessionId"].FirstOrDefault();
+
             if (!string.IsNullOrEmpty(clientId))
             {
                 await clientsNotifier.RealTimeSyncWithClient(webSocket, clientId);
