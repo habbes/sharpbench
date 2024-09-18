@@ -6,7 +6,7 @@ namespace SharpbenchApi;
 
 public class RealtimeClientsNotifier
 {
-    ConcurrentDictionary<WebSocket, ClientEntry> realTimeClients = new();
+    ConcurrentDictionary<string, ClientEntry> realTimeClients = new();
     ILogger<RealtimeClientsNotifier> logger;
 
     public RealtimeClientsNotifier(ILogger<RealtimeClientsNotifier> logger)
@@ -18,7 +18,7 @@ public class RealtimeClientsNotifier
     {
         logger.LogInformation("Realtime communication established with new client");
         var tcs = new TaskCompletionSource();
-        realTimeClients.TryAdd(client, new ClientEntry(clientId, client, tcs));
+        realTimeClients.TryAdd(clientId, new ClientEntry(clientId, client, tcs));
         // the task will be complete when we detect that the connection is closed
         // or all communication has ended.
         // This prevents the caller from terminating prematurely and abruptly closing the connection
@@ -32,12 +32,18 @@ public class RealtimeClientsNotifier
         await BroadcastRawMessage(data);
     }
 
+    public async Task SendMessageToClient(string clientId, JobMessage message)
+    {
+        var data = new ArraySegment<byte>(message.Data, 0, message.Data.Length);
+        await TrySendToClient(clientId, data);
+    }
+
     public async Task CloseAllClients()
     {
         List<Task> tasks = new List<Task>();
         foreach (var entry in realTimeClients)
         {
-            tasks.Add(entry.Key.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", default));
+            tasks.Add(entry.Value.Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", default));
             entry.Value.TaskHandler.SetResult();
         }
 
@@ -57,16 +63,18 @@ public class RealtimeClientsNotifier
         await Task.WhenAll(tasks);
     }
 
-    async Task<bool> TrySendToClient(WebSocket key, ArraySegment<byte> message)
+    async Task<bool> TrySendToClient(string clientId, ArraySegment<byte> message)
     {
-        if (!realTimeClients.TryGetValue(key, out var clientEntry))
+        if (!realTimeClients.TryGetValue(clientId, out var clientEntry))
         {
+            logger.LogInformation($"Attempted to send message to client {clientId}, but it was not found.");
             return false;
         }
 
         if (clientEntry.Socket.State == WebSocketState.Closed)
         {
-            realTimeClients.Remove(key, out _);
+            logger.LogInformation($"Attempted to send message to client {clientId}, but client socket was closed.");
+            realTimeClients.Remove(clientId, out _);
             // complete the task being awaited
             clientEntry.TaskHandler.SetResult();
             return false;
