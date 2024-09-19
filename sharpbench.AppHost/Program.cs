@@ -1,14 +1,14 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddRedis("sharpbench-cache");
+var cache = builder.AddRedis("SharpbenchCache");
 
-var sharpbenchapi = builder.AddProject<Projects.SharpbenchApi>("sharpbench-api")
+var sharpbenchapi = builder.AddProject<Projects.SharpbenchApi>("SharpbenchApi")
     .WithReference(cache);
 
-var sharpbenchrunner = builder.AddProject<Projects.SharpbenchRunner>("sharpbench-runner")
+var sharpbenchrunner = builder.AddProject<Projects.SharpbenchRunner>("SharpbenchRunner")
     .WithReference(cache);
 
-builder.AddNpmApp("sharpbench-ui", "../webapp", "dev")
+builder.AddNpmApp("SharpbenchUi", "../webapp", "dev")
     .WithReference(sharpbenchapi)
     .WithReference(sharpbenchrunner)
     .WithHttpEndpoint(env: "PORT")

@@ -6,7 +6,7 @@ using SharpbenchApi;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddRedisClient("sharpbench-cache");
+builder.AddRedisClient("SharpbenchCache");
 builder.Services.AddCors();
 builder.Services.AddSharpbench();
 builder.Services.AddSingleton<RealtimeClientsNotifier>();
